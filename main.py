@@ -211,6 +211,10 @@ if __name__ == "__main__":
             plot_vehicle(follower3.pos[0], follower3.pos[1], follower3.heading, x_traj, y_traj)
             plot_vehicle(follower4.pos[0], follower4.pos[1], follower4.heading, x_traj, y_traj)
 
+            ax = plt.axes(projection='rectilinear')
+            ax.plot(map.ox, map.oy, np.ones(len(map.ox)), label='range')
+            ax.plot(map.traj[0, :], map.traj[1, :], '-b', label='reference')
+
     plt.cla()
     ax = plt.axes(projection='rectilinear')
     ax.plot(map.ox, map.oy, np.ones(len(map.ox)), label='range')
