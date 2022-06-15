@@ -141,6 +141,8 @@ def plot_vehicle(x, y, theta, x_traj, y_traj):
         'key_release_event',
         lambda event: [exit(0) if event.key == 'escape' else None])
 
+    plt.xlim(0, 100)
+    plt.ylim(0, 100)
     plt.pause(dt)
 
 
