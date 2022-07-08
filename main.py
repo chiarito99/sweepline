@@ -1,3 +1,5 @@
+from operator import length_hint
+from tkinter import W
 import numpy as np
 import math
 import matplotlib.pyplot as plt
@@ -5,7 +7,7 @@ from mpl_toolkits import mplot3d
 from Plotting import Plotting
 from env import Env
 from sklearn.metrics import jaccard_score
-from sweep_line import getConvexPolygon
+from sweep_line_has_bad import getConvexPolygon,computeWLofCamera
 import time
 
 class LeaderUAV:
@@ -217,42 +219,88 @@ def plot_obstacles(ox, oy, oz, r):
     y_grid = r*np.sin(theta_grid) + oy
     return x_grid,y_grid,z_grid
 
+def giaiPTBac2(a, b, c):
+    delta = b * b - 4 * a * c
+    if (delta > 0):
+        x1 = (float)((-b + math.sqrt(delta)) / (2 * a));
+        x2 = (float)((-b - math.sqrt(delta)) / (2 * a));
+    elif (delta == 0):
+        x1 = (-b / (2 * a))
+    else:
+        print("Phương trình vô nghiệm!")
+    return x1,x2
+
+def overlap(width,length,percenoverlap):
+    indicator = (percenoverlap *width *length)/(2*width *length*2)
+    x1,x2 = giaiPTBac2(-1,1,-indicator)
+    if x1<x2:
+        return x1
+    else:
+        return x2
+
+def calculateover(width,length,percen):
+    width_s = width * percen
+    length_s = length * percen
+    offset_x = width - width_s
+    offset_y = length - length_s
+    resolution = 2*(offset_y + length/2)- length_s
+    return offset_x,offset_y,resolution
+
 
 if __name__ == "__main__":
     dt = 0.01  # time step
-    n_vertices = 5
-    polygon_radius = 40
-    rad_var = 1
-    ang_var = 1
-    dx = 2
-    transl_spd = 10
-    rot_spd = np.pi/4
+    
+    # # Get convex polygon
 
-    samplingx0 = -80
-    samplingx1 = 80
-    samplingy0 = -80
-    samplingy1 = 80
+    # n_vertices = 5
+    # polygon_radius = 40
+    # rad_var = 1
+    # ang_var = 1
+    # dx = 2
+    # transl_spd = 10
+    # rot_spd = np.pi/4
 
-    x_start = (samplingx1- samplingx0) * np.random.rand() + samplingx0
-    y_start = (samplingy1- samplingy0) * np.random.rand() + samplingy0
-    x_end = (samplingx1- samplingx0) * np.random.rand() + samplingx0
-    y_end = (samplingy1- samplingy0) * np.random.rand() + samplingy0
+    # samplingx0 = -80
+    # samplingx1 = 80
+    # samplingy0 = -80
+    # samplingy1 = 80
 
-    M, Mshifted= getConvexPolygon(n_vertices,polygon_radius,rad_var,ang_var)
-    K = M.tolist()
+    # x_start = (samplingx1- samplingx0) * np.random.rand() + samplingx0
+    # y_start = (samplingy1- samplingy0) * np.random.rand() + samplingy0
+    # x_end = (samplingx1- samplingx0) * np.random.rand() + samplingx0
+    # y_end = (samplingy1- samplingy0) * np.random.rand() + samplingy0
+
+    x_start = -80
+    y_start = -80
+    x_end = 80
+    y_end = 80
+    # M, Mshifted= getConvexPolygon(n_vertices,polygon_radius,rad_var,ang_var)
+    # K = M.tolist()
+    # print(K)
+    K = [[58.98295314305732, -40.46389776524755], [-19.5748849118947, -78.531936254165], [-62.674712335622026, 24.06481669719506], [-31.09947113556031, 61.08658069805723], [52.20911077098446, 26.412130624396212]]
     # Map and reference path generation
     # ox = [0.0, 50.0, 50.0, 0.0, 0.0]
     # oy = [0.0, 0.0, 60.0, 60.0, 0.0]
-    resolution = 15
-    map = Env(K,x_start,y_start,x_end,y_end,resolution)
+    # Calculate L&W of one Camera
+    alpha = 0.15 # Góc máy  chiều rộng
+    beta = 0.22 # GÓc máy chiều 
+    altitude = 70
+    percenoverlap = 0.3
+    width , length = computeWLofCamera(altitude,alpha,beta)
+    xxx = overlap(width,length,percenoverlap)
+    offsetx,offsety,resolution = calculateover(width,length,xxx)
+    map = Env(K,x_start,y_start,x_end,y_end,altitude,resolution)
+    # Viết hàm ở đây:
+    # Đầu vào: Chiều rộng, Chiều dài của một camera, Độ trùng nhau của mỗi ảnh, Số lượng Fl.
+    # Đầu ra: tính resolution, tính ra khoảng cách và góc của con Fl
 
     K.append(K[0])
     ox, oy = zip(*K)
-    
+
     # Formation processing
     leader = LeaderUAV(pos=[x_start,y_start,0])
-    follower1 = FollowerUAV(pos=[x_start+5,y_start+5,0],leader=leader, delta=[-5,-5])
-    follower2 = FollowerUAV(pos=[x_start-5,y_start-5,0],leader=leader, delta=[-5, 5])
+    follower1 = FollowerUAV(pos=[x_start+5,y_start+5,0],leader=leader, delta=[-offsetx,-offsety])
+    follower2 = FollowerUAV(pos=[x_start-5,y_start-5,0],leader=leader, delta=[-offsetx, offsety])
 
     x_traj, y_traj = [], []
     for i in range(len(map.traj[0])):
@@ -284,7 +332,7 @@ if __name__ == "__main__":
 
     # print(leader.path)
     plot= Plotting("formation")
-    plot.plot_animation(leader.path,follower1.path,follower2.path,ox, oy,x_start,y_start,x_end,y_end)
+    plot.plot_animation(leader.path,follower1.path,follower2.path,ox, oy,x_start,y_start,x_end,y_end,length,width)
     plt.show()
     
     # Plotting

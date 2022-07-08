@@ -1,20 +1,29 @@
 from cubic_spline import Spline2D
 from grid_based_sweep import *
 import numpy as np
-from sweep_line import getOpSweep
+from sweep_line_has_bad import getOpSweep
+from sweep_line_has_bad import getBadSweep
 from shapely.geometry import LineString
 from shapely.ops import unary_union
 
 class Env:
-    def __init__(self,K ,x_start,y_start,x_end, y_end, resolution=20):
+    def __init__(self,K ,x_start,y_start,x_end, y_end,altitude, resolution):
         # The range of the map
         self.K = K
         self.x_start = x_start
         self.y_start = y_start
         self.x_end = x_end
         self.y_end = y_end
+        self.altitude = altitude
+        self.resolution= resolution
+
+        
         path = getOpSweep(K, [x_start,y_start], [x_end,y_end],resolution)
 
+        K.append(K[0])
+        ox, oy = zip(*K)
+        self.ox = ox
+        self.oy = oy
         path = np.array(path)
         px = []
         py = []
@@ -26,6 +35,12 @@ class Env:
                 px.append(xk)
                 py.append(yk)
 
+        # for i in range(si):
+        #     for k in range(50,100):
+        #         xk = path[i][0]- k/100*(path[i][0]-path[i+1][0])
+        #         yk = path[i][1]- k/100*(path[i][1]-path[i+1][1])
+        #         px.append(xk)
+        #         py.append(yk)
         ds = 0.5    # [m] distance of each intepolated points
         sp = Spline2D(px, py)
         s = np.arange(0, sp.s[-1], ds)
@@ -38,18 +53,17 @@ class Env:
             ryaw.append(sp.calc_yaw(i_s))
             rk.append(sp.calc_curvature(i_s))
 
-        self.altitude = 5
         rz = np.ones(np.size(rx))*self.altitude
 
         # Desired trajectory
         self.traj = np.array([rx, ry, rz])
 
-        # # Obstacle
-        # self.obs = np.array([[20,30,2],
-        #                      [30,40,2],
-        #                      [10,20,2]])
-        
         # Obstacle
+        # self.obs = np.array([[20,30,5],
+        #                      [-25,10,5],
+        #                      [10,20,5]])
+        
+        # # Obstacle
         self.obs = np.array([[0,0,0],
                              [0,0,0],
                              [0,0,0]])
@@ -58,10 +72,21 @@ if __name__ == "__main__":
     # ox = [0.0, 50.0, 50.0, 0.0, 0.0]
     # oy = [0.0, 0.0, 60.0, 60.0, 0.0]
     # resolution = 5
-    ox = [200.0, 800.0, 800.0, 200.0, 200.0]
-    oy = [200.0, 200.0, 700.0, 700.0, 200.0]
-    resolution = 30
-    env = Env(ox, oy, resolution)
+    x_start = -80
+    y_start = -80
+    x_end = 80
+    y_end = 80
+
+    # M, Mshifted= getConvexPolygon(n_vertices,polygon_radius,rad_var,ang_var)
+    # K = M.tolist()
+    # print(K)
+    K = [[58.98295314305732, -40.46389776524755], [-19.5748849118947, -78.531936254165], [-62.674712335622026, 24.06481669719506], [-31.09947113556031, 61.08658069805723], [52.20911077098446, 26.412130624396212]]
+    # Map and reference path generation
+    # ox = [0.0, 50.0, 50.0, 0.0, 0.0]
+    # oy = [0.0, 0.0, 60.0, 60.0, 0.0]
+    altitude = 10
+    overlap = 0.0 
+    env = Env(K,x_start,y_start,x_end,y_end,altitude,overlap)
 
     plt.figure()
     plt.plot(env.ox, env.oy, '-xk', label='range')
