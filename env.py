@@ -59,14 +59,14 @@ class Env:
         self.traj = np.array([rx, ry, rz])
 
         # Obstacle
-        # self.obs = np.array([[20,30,5],
-        #                      [-25,10,5],
-        #                      [10,20,5]])
+        self.obs = np.array([[20,30,5],
+                             [-25,10,5],
+                             [10,20,5]])
         
         # # Obstacle
-        self.obs = np.array([[0,0,0],
-                             [0,0,0],
-                             [0,0,0]])
+        # self.obs = np.array([[0,0,5],
+        #                      [0,0,0],
+        #                      [0,0,0]])
 
 if __name__ == "__main__":
     # ox = [0.0, 50.0, 50.0, 0.0, 0.0]

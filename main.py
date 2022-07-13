@@ -33,57 +33,56 @@ class LeaderUAV:
             fm2g = self.am*dm/self.bm
         return 2*fm2g*vm2g
 
-    # def avoid_obstacle(self, obs):
+    def avoid_obstacle(self, obs):
+        v = np.zeros(np.size(self.pos))
+        for i in range(len(obs)):
+            do = math.sqrt((obs[i,0]-self.pos[0])**2 + (obs[i,1]-self.pos[1])**2) - obs[i,2] - 0.5
+            vao = (obs[i,:2]-self.pos[:2])/do          # Velocity avoiding obstacle
+            sig = -np.sign(vao[0]*math.sin(self.heading)-vao[1]*math.cos(self.heading))
+            rot = np.array([[0,-sig,0],[sig,0,0],[0,0,1]])
+            fao = 0
+            vao = np.array([vao[0],vao[1],0])
+            if do <= self.bo :
+                fao = self.ao*(1-do/self.bo)
+            v = v + (fao*rot)@vao
+        return v
+
+    # def avoid_obstacle(self,obs):
     #     v = np.zeros(np.size(self.pos))
     #     for i in range(len(obs)):
     #         do = math.sqrt((obs[i,0]-self.pos[0])**2 + (obs[i,1]-self.pos[1])**2) - obs[i,2]
 
-    #         vao = (obs[i,:2]-self.pos[:2]) / do         # Velocity avoiding obstacle
-    #         sig = np.sign(math.sin(math.atan2(vao[1]*math.cos(self.heading)-vao[0]*math.sin(self.heading),
-    #                                          vao[0]*math.cos(self.heading)+vao[1]*math.sin(self.heading))))
-    #         vao = np.array([vao[1]*sig, vao[0], 0])
-    #         fao = 0
-    #         if do <= self.bo + 0.1:
-    #             fao = self.ao*(1-do/self.bo)
-    #         v = v + fao*vao
+    #         vao = (obs[i,:2]-self.pos[:2])/do  
+    #         if self.heading > 0:     # Velocity avoiding obstacle
+    #             sig1 = -np.sign(vao[0]*math.sin(self.heading)-vao[1]*math.cos(self.heading))
+    #             sig2 = -np.sign(vao[0]*math.cos(self.heading)-vao[1]*math.sin(self.heading))
+    #         else:
+    #             sig1 = -np.sign(vao[0]*math.sin(self.heading)-vao[1]*math.cos(self.heading))
+    #             sig2 = np.sign(vao[0]*math.cos(self.heading)-vao[1]*math.sin(self.heading))
+    #         # if self.heading > 0 and self.heading <np.pi/2:     # Velocity avoiding obstacle
+    #         #     sig1 = -np.sign(vao[0]*math.sin(self.heading)-vao[1]*math.cos(self.heading))
+    #         #     sig2 = -np.sign(vao[0]*math.cos(self.heading)-vao[1]*math.sin(self.heading))
+    #         # elif self.heading > np.pi/2 and self.heading <np.pi:
+    #         #     sig1 = -np.sign( vao[0]*math.sin(self.heading)+ vao[1]*math.cos(self.heading))
+    #         #     sig2 = np.sign(-vao[0]*math.cos(self.heading)-vao[1]*math.sin(self.heading))
+    #         # elif self.heading > -np.pi/2 and self.heading <0:
+    #         #     sig1 = -np.sign(-vao[0]*math.sin(self.heading)-vao[1]*math.cos(self.heading))
+    #         #     sig2 = -np.sign(vao[0]*math.cos(self.heading)+vao[1]*math.sin(self.heading))
+    #         # else:
+    #         #     sig1 = -np.sign(-vao[0]*math.sin(self.heading)-vao[1]*math.cos(self.heading))
+    #         #     sig2 = np.sign(vao[0]*math.cos(self.heading)- vao[1]*math.sin(self.heading))
+    #         # if sig2 == 0:
+    #         #     sig2 = 1
+    #         vao = np.array([vao[1]*sig1, vao[0]*sig2, 0])
+    #         e=0
+    #         if do <= self.bo:
+    #             e = 1.5*np.exp(-2.9*(do -2.0)/do)
+    #             if abs(e)>3:
+    #                 e= np.sign(e)
+    #         # if do <= self.bo + 0.2:
+    #         #     fao = self.ao*(1-do/self.bo)
+    #         v = v + e*vao
     #     return v
-
-    def avoid_obstacle(self,obs):
-        v = np.zeros(np.size(self.pos))
-        for i in range(len(obs)):
-            do = math.sqrt((obs[i,0]-self.pos[0])**2 + (obs[i,1]-self.pos[1])**2) - obs[i,2]
-
-            vao = (obs[i,:2]-self.pos[:2])/do  
-            if self.heading > 0:     # Velocity avoiding obstacle
-                sig1 = -np.sign(vao[0]*math.sin(self.heading)-vao[1]*math.cos(self.heading))
-                sig2 = -np.sign(vao[0]*math.cos(self.heading)-vao[1]*math.sin(self.heading))
-            else:
-                sig1 = -np.sign(vao[0]*math.sin(self.heading)-vao[1]*math.cos(self.heading))
-                sig2 = np.sign(vao[0]*math.cos(self.heading)-vao[1]*math.sin(self.heading))
-            # if self.heading > 0 and self.heading <np.pi/2:     # Velocity avoiding obstacle
-            #     sig1 = -np.sign(vao[0]*math.sin(self.heading)-vao[1]*math.cos(self.heading))
-            #     sig2 = -np.sign(vao[0]*math.cos(self.heading)-vao[1]*math.sin(self.heading))
-            # elif self.heading > np.pi/2 and self.heading <np.pi:
-            #     sig1 = -np.sign( vao[0]*math.sin(self.heading)+ vao[1]*math.cos(self.heading))
-            #     sig2 = np.sign(-vao[0]*math.cos(self.heading)-vao[1]*math.sin(self.heading))
-            # elif self.heading > -np.pi/2 and self.heading <0:
-            #     sig1 = -np.sign(-vao[0]*math.sin(self.heading)-vao[1]*math.cos(self.heading))
-            #     sig2 = -np.sign(vao[0]*math.cos(self.heading)+vao[1]*math.sin(self.heading))
-            # else:
-            #     sig1 = -np.sign(-vao[0]*math.sin(self.heading)-vao[1]*math.cos(self.heading))
-            #     sig2 = np.sign(vao[0]*math.cos(self.heading)- vao[1]*math.sin(self.heading))
-            # if sig2 == 0:
-            #     sig2 = 1
-            vao = np.array([vao[1]*sig1, vao[0]*sig2, 0])
-            e=0
-            if do <= self.bo:
-                e = 1.5*np.exp(-2.9*(do -2.0)/do)
-                if abs(e)>3:
-                    e= np.sign(e)
-            # if do <= self.bo + 0.2:
-            #     fao = self.ao*(1-do/self.bo)
-            v = v + e*vao
-        return v
 
 
     def control_signal(self, ref, obs):
@@ -139,70 +138,56 @@ class FollowerUAV:
         # xr = self.delta[0] + ref[0]
         # yr = self.delta[1] + ref[1]
         zr = ref[2]
-        pr = np.array([xr, yr, zr])
-        
+        pr = np.array([xr, yr, zr]) 
         dk = math.sqrt((xr-self.pos[0])**2 + (yr-self.pos[1])**2 + (zr-self.pos[2])**2)
-
         vkf = (pr-self.pos)/dk     # Velocity move to goal
         fkf = self.am              # Control parameter of vm2g
         if dk <= self.bm:
             fkf = self.am*dk/self.bm
         return 2.2*fkf*vkf
 
-    # def avoid_obstacle(self, obs):
+    def avoid_obstacle(self, obs):
+        v = np.zeros(np.size(self.pos))
+        for i in range(len(obs)):
+            do = math.sqrt((obs[i,0]-self.pos[0])**2 + (obs[i,1]-self.pos[1])**2) - obs[i,2]-0.5
+            vao = (obs[i,:2]-self.pos[:2])/do          # Velocity avoiding obstacle
+            sig = -np.sign(vao[0]*math.sin(self.heading)-vao[1]*math.cos(self.heading))
+            rot = np.array([[0,-sig,0],[sig,0,0],[0,0,1]])
+            fao = 0
+            vao = np.array([vao[0],vao[1],0])
+            if do <= self.bo :
+                fao = self.ao*(1-do/self.bo)
+            v = v + (fao*rot)@vao
+        return v
+
+    # def avoid_obstacle(self,obs):
     #     v = np.zeros(np.size(self.pos))
     #     for i in range(len(obs)):
     #         do = math.sqrt((obs[i,0]-self.pos[0])**2 + (obs[i,1]-self.pos[1])**2) - obs[i,2]
-
     #         vao = (obs[i,:2]-self.pos[:2])/do          # Velocity avoiding obstacle
-    #         sig1 = -np.sign(vao[0]*math.sin(self.heading)-vao[1]*math.cos(self.heading))
-    #         sig2 = -np.sign(vao[0]*math.cos(self.heading)-vao[1]*math.sin(self.heading))
-    #         if sig2 == 0:
-    #             sig2 = 1
-    #         vao = np.array([vao[1]*sig1, vao[0]*sig2, 0])
-    #         fao = 0
-    #         if do <= self.bo + 0.2:
-    #             fao = self.ao*(1-do/self.bo)
-    #         v = v + fao*vao
-    #     return v
-
-    def avoid_obstacle(self,obs):
-        v = np.zeros(np.size(self.pos))
-        for i in range(len(obs)):
-            do = math.sqrt((obs[i,0]-self.pos[0])**2 + (obs[i,1]-self.pos[1])**2) - obs[i,2]
-            vao = (obs[i,:2]-self.pos[:2])/do          # Velocity avoiding obstacle
-            if self.heading > 0 and self.heading <np.pi/2:     # Velocity avoiding obstacle
-                sig1 = -np.sign(vao[0]*math.sin(self.heading)-vao[1]*math.cos(self.heading))
-                sig2 = -np.sign(vao[0]*math.cos(self.heading)-vao[1]*math.sin(self.heading))
-            elif self.heading > np.pi/2 and self.heading <np.pi:
-                sig1 = -np.sign(vao[0]*math.sin(self.heading)+ vao[1]*math.cos(self.heading))
-                sig2 = np.sign(-vao[0]*math.cos(self.heading)-vao[1]*math.sin(self.heading))
-            elif self.heading > -np.pi/2 and self.heading <0:
-                sig1 = -np.sign(-vao[0]*math.sin(self.heading)-vao[1]*math.cos(self.heading))
-                sig2 = -np.sign(vao[0]*math.cos(self.heading)+vao[1]*math.sin(self.heading))
-            else:
-                sig1 = np.sign(-vao[0]*math.sin(self.heading)-vao[1]*math.cos(self.heading))
-                sig2 = np.sign(vao[0]*math.cos(self.heading)- vao[1]*math.sin(self.heading))
-            
-            if sig2 == 0:
-                sig2 = 1
-            vao = np.array([vao[1]*sig1, vao[0]*sig2, 0])
-            e=0
-            if do <= self.bo:
-                e = 1.5*np.exp(-2.9*(do -2.0)/do)
-                if abs(e)>3:
-                    e= np.sign(e)
-            # if do <= self.bo + 0.2:
-            #     fao = self.ao*(1-do/self.bo)
-            v = v + e*vao
-        return v
+    #         if self.heading > 0 and self.heading <np.pi/2:     # Velocity avoiding obstacle
+    #             sig1 = -np.sign(vao[0]*math.sin(self.heading)-vao[1]*math.cos(self.heading))
+    #             sig2 = -np.sign(vao[0]*math.cos(self.heading)-vao[1]*math.sin(self.heading))
+    #         elif self.heading > np.pi/2 and self.heading <np.pi:
+    #             sig1 = -np.sign(vao[0]*math.sin(self.heading)+ vao[1]*math.cos(self.heading))
+    #             sig2 = np.sign(-vao[0]*math.cos(self.heading)-vao[1]*math.sin(self.heading))
+    #         elif self.heading > -np.pi/2 and self.heading <0:
+    #             sig1 = -np.sign(-vao[0]*math.sin(self.heading)-vao[1]*math.cos(self.heading))
+    #             sig2 = -np.sign(vao[0]*math.cos(self.heading)+vao[1]*math.sin(self.heading))
+    #         else:
+    #             sig1 = np.sign(-vao[0]*math.sin(self.heading)-vao[1]*math.cos(self.heading))
+    #             sig2 = np.sign(vao[0]*math.cos(self.heading)- vao[1]*math.sin(self.heading))
     
 
     def control_signal(self, ref, obs,rbt_pos):
         v1 = self.keep_formation(ref)
-        v2 = self.avoid_obstacle(obs)
+        v2 = 1.3*self.avoid_obstacle(obs)
         v3 = self.avoid_Robot(rbt_pos)
-        return v1 + v2+ v3
+        if v2[0]== 0:
+            v1 = 1.8*v1
+        else:
+            v1=v1
+        return v1 +v2+v3
     
     def update_position(self, vel, dt=0.1):
         self.pos = self.pos + vel*dt
@@ -330,7 +315,7 @@ if __name__ == "__main__":
         follower1.update_position(f1vel)
         follower2.update_position(f2vel)
 
-    # print(leader.path)
+    # # print(leader.path)
     plot= Plotting("formation")
     plot.plot_animation(leader.path,follower1.path,follower2.path,ox, oy,x_start,y_start,x_end,y_end,length,width)
     plt.show()
@@ -365,4 +350,3 @@ if __name__ == "__main__":
     ax.set_zlabel('z [m]')
     ax.legend()
     plt.show()
-    
