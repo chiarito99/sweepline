@@ -28,20 +28,20 @@ class Env:
         px = []
         py = []
         si = path.shape[0] - 1
+        # for i in range(si):
+        #     for k in range(0,50):
+        #         xk = path[i][0]- k*(path[i][0]-path[i+1][0])
+        #         yk = path[i][1]- k*(path[i][1]-path[i+1][1])
+        #         px.append(xk)
+        #         py.append(yk)
+
         for i in range(si):
-            for k in range(0,100):
+            for k in range(10,90):
                 xk = path[i][0]- k/100*(path[i][0]-path[i+1][0])
                 yk = path[i][1]- k/100*(path[i][1]-path[i+1][1])
                 px.append(xk)
                 py.append(yk)
-
-        # for i in range(si):
-        #     for k in range(50,100):
-        #         xk = path[i][0]- k/100*(path[i][0]-path[i+1][0])
-        #         yk = path[i][1]- k/100*(path[i][1]-path[i+1][1])
-        #         px.append(xk)
-        #         py.append(yk)
-        ds = 0.5    # [m] distance of each intepolated points
+        ds = 0.6  # [m] distance of each intepolated points
         sp = Spline2D(px, py)
         s = np.arange(0, sp.s[-1], ds)
 
@@ -59,14 +59,14 @@ class Env:
         self.traj = np.array([rx, ry, rz])
 
         # Obstacle
-        self.obs = np.array([[20,30,5],
-                             [-25,10,5],
-                             [10,20,5]])
+        # self.obs = np.array([[20,30,5],
+        #                      [-25,10,5],
+        #                      [10,20,5]])
         
         # # Obstacle
-        # self.obs = np.array([[0,0,5],
-        #                      [0,0,0],
-        #                      [0,0,0]])
+        self.obs = np.array([[100,100,0],
+                             [-100,100,0],
+                             [90,90,0]])
 
 if __name__ == "__main__":
     # ox = [0.0, 50.0, 50.0, 0.0, 0.0]
