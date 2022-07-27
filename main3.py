@@ -63,6 +63,8 @@ class FollowerUAV:
         # Configuration
         self.pos = np.array(pos)
         self.heading = 0
+        self.angle = []
+        self.m = 0
         if leader == None:
             self.leader = LeaderUAV()
         else:
@@ -93,12 +95,22 @@ class FollowerUAV:
 
 
     def keep_formation(self, ref):
+        self.m=self.m+1
         xr = np.cos(self.leader.heading)*self.delta[0] - np.sin(self.leader.heading)*self.delta[1] + ref[0]
         yr = np.sin(self.leader.heading)*self.delta[0] + np.cos(self.leader.heading)*self.delta[1] + ref[1]
         zr = ref[2]
         pr = np.array([xr, yr, zr]) 
+        waypoint = np.array([-58.25228023483275, 29.250089440097742])
+        waypoint1 = np.array([-47.031115789880786, 33.96398376090513])
+        wk =math.sqrt((xr-waypoint[0])**2 + (yr-waypoint[1])**2 )
+        wk1 =math.sqrt((xr-waypoint1[0])**2 + (yr-waypoint1[1])**2 )
         dk = math.sqrt((xr-self.pos[0])**2 + (yr-self.pos[1])**2 + (zr-self.pos[2])**2)
-        vkf = (pr-self.pos)/dk     # Velocity move to goal
+        vkf = (pr-self.pos)/dk# Velocity move to goal
+        if (wk < 10 or wk1 <10) and abs(yr)<abs(ref[1]):
+            vkf = vkf/7
+            
+        # if dk>1 and dk <2:
+        #     vkf = 0
         fkf = self.am              # Control parameter of vm2g
         if dk <= self.bm:
             fkf = self.am*dk/self.bm
@@ -124,15 +136,16 @@ class FollowerUAV:
         v1 = self.keep_formation(ref)
         v2 = 1.3*self.avoid_obstacle(obs)
         v3 = self.avoid_Robot(rbt_pos)
-        if v2[0]== 0:
+        if v2[1] == 0 :
             v1 = 1.3*v1
         else:
-            v1=v1
-        return v1 +v2+v3
+            v1= 1*v1
+        return v1+v2+v3
     
     def update_position(self, vel, dt=0.1):
+        self.heading =(np.arctan2(vel[1], vel[0]) + np.pi) %(2*np.pi)-np.pi
+        self.angle.append(self.heading)
         self.pos = self.pos + vel*dt
-        self.heading = (np.arctan2(vel[1], vel[0]) + np.pi) %(2*np.pi)-np.pi
         self.path.append(self.pos)
 
 
@@ -174,7 +187,7 @@ def calculateover(width,length,percen):
 
 
 if __name__ == "__main__":
-    dt = 0.01  # time step
+    dt = 0.1  # time step
     
     # # Get convex polygon
 
@@ -222,9 +235,10 @@ if __name__ == "__main__":
 
     # Formation processing
     leader = LeaderUAV(pos=[x_start,y_start,0])
-    follower1 = FollowerUAV(pos=[x_start+5,y_start+5,0],leader=leader, delta=[-offsetx,-offsety])
-    follower2 = FollowerUAV(pos=[x_start-5,y_start-5,0],leader=leader, delta=[-offsetx, offsety])
+    follower1 = FollowerUAV(pos=[x_start,y_start,0],leader=leader, delta=[-offsetx,-offsety])
+    follower2 = FollowerUAV(pos=[x_start,y_start,0],leader=leader, delta=[-offsetx, offsety])
     x_traj, y_traj = [], []
+    print(len(map.traj[0]))
     for i in range(len(map.traj[0])):
         ref = map.traj[:,i]
         x_traj.append(ref[0])
@@ -246,6 +260,9 @@ if __name__ == "__main__":
         lvel = leader.control_signal(ref, map.obs)
         f1vel = follower1.control_signal(ref, map.obs,rbt_pos)
         f2vel = follower2.control_signal(ref, map.obs,rbt_pos)
+        # if(i%80 > 60):
+        #     f1vel = f1vel / 2
+
 
         # UAV update
         leader.update_position(lvel)
@@ -253,6 +270,7 @@ if __name__ == "__main__":
         follower2.update_position(f2vel)
 
     # # print(leader.path)
+    # print(follower1.angle)
     plot= Plotting("formation")
     plot.plot_animation(leader.path,follower1.path,follower2.path,ox, oy,x_start,y_start,x_end,y_end,length,width,map.obs)
     plt.show()

@@ -19,7 +19,8 @@ class Env:
 
         
         path = getOpSweep(K, [x_start,y_start], [x_end,y_end],resolution)
-
+        self.point = path
+        print(self.point)
         K.append(K[0])
         ox, oy = zip(*K)
         self.ox = ox
@@ -28,20 +29,14 @@ class Env:
         px = []
         py = []
         si = path.shape[0] - 1
-        # for i in range(si):
-        #     for k in range(0,50):
-        #         xk = path[i][0]- k*(path[i][0]-path[i+1][0])
-        #         yk = path[i][1]- k*(path[i][1]-path[i+1][1])
-        #         px.append(xk)
-        #         py.append(yk)
-
         for i in range(si):
-            for k in range(10,90):
+            for k in range(0,100):
                 xk = path[i][0]- k/100*(path[i][0]-path[i+1][0])
                 yk = path[i][1]- k/100*(path[i][1]-path[i+1][1])
                 px.append(xk)
                 py.append(yk)
         ds = 0.6  # [m] distance of each intepolated points
+
         sp = Spline2D(px, py)
         s = np.arange(0, sp.s[-1], ds)
 
