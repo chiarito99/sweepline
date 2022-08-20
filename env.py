@@ -1,3 +1,4 @@
+from importlib.util import set_loader
 from cubic_spline import Spline2D
 from grid_based_sweep import *
 import numpy as np
@@ -20,7 +21,6 @@ class Env:
         
         path = getOpSweep(K, [x_start,y_start], [x_end,y_end],resolution)
         self.point = path
-        print(self.point)
         K.append(K[0])
         ox, oy = zip(*K)
         self.ox = ox
@@ -30,15 +30,16 @@ class Env:
         py = []
         si = path.shape[0] - 1
         for i in range(si):
-            for k in range(0,100):
-                xk = path[i][0]- k/100*(path[i][0]-path[i+1][0])
-                yk = path[i][1]- k/100*(path[i][1]-path[i+1][1])
+            for k in range(0,30):
+                xk = path[i][0]- k/30*(path[i][0]-path[i+1][0])
+                yk = path[i][1]- k/30*(path[i][1]-path[i+1][1])
                 px.append(xk)
                 py.append(yk)
-        ds = 0.6  # [m] distance of each intepolated points
-
+        ds = 0.5  # [m] distance of each intepolated points
         sp = Spline2D(px, py)
         s = np.arange(0, sp.s[-1], ds)
+        self.s=s
+        # print(len(s))
 
         rx, ry, ryaw, rk = [], [], [], []
         for i_s in s:
@@ -52,6 +53,8 @@ class Env:
 
         # Desired trajectory
         self.traj = np.array([rx, ry, rz])
+        self.ryaw = ryaw
+        self.rk=rk
 
         # Obstacle
         # self.obs = np.array([[20,30,5],
@@ -83,11 +86,11 @@ if __name__ == "__main__":
     overlap = 0.0 
     env = Env(K,x_start,y_start,x_end,y_end,altitude,overlap)
 
-    plt.figure()
-    plt.plot(env.ox, env.oy, '-xk', label='range')
-    plt.plot(env.traj[0,:], env.traj[1,:], '-b', label='reference')
-    plt.axis('scaled')
-    plt.show()
+    # plt.figure()
+    # plt.plot(env.ox, env.oy, '-xk', label='range')
+    # plt.plot(env.traj[0,:], env.traj[1,:], '-b', label='reference')
+    # plt.axis('scaled')
+    # plt.show()
     #
     # import scipy.io
     # scipy.io.savemat('ref.mat', dict(lm=np.array([ox, oy]),path=env.traj))

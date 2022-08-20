@@ -10,9 +10,10 @@ class Spline:
         self.b, self.c, self.d, self.w = [], [], [], []
 
         self.x = x; self.y = y
-
+        # print(x)
         self.nx = len(x)
         h = np.diff(x)
+        # print(h)
 
         # Calculate coefficient c
         self.a = [iy for iy in y]
@@ -35,7 +36,9 @@ class Spline:
             return None
         
         i = self.__search_index(t)
+        # print(i)
         dx = t - self.x[i]
+        print(dx)
         result = self.a[i] + self.b[i]*dx + self.c[i]*dx**2.0 + self.d[i]*dx**3.0
         return result
 
@@ -63,6 +66,7 @@ class Spline:
             return None
 
         i = self.__search_index(t)
+        # print(self.x[i])
         dx = t - self.x[i]
         result = 2.0*self.c[i] + 6.0*self.d[i]*dx
         return result
@@ -71,6 +75,7 @@ class Spline:
         """
         search data segment index
         """
+        # print(bisect.bisect(self.x, x))
         return bisect.bisect(self.x, x) - 1
 
     def __calc_A(self, h):
@@ -88,7 +93,7 @@ class Spline:
         A[0, 1] = 0.0
         A[self.nx-1, self.nx-2] = 0.0
         A[self.nx-1, self.nx-1] = 1.0
-        #  print(A)
+        # print(A)
         return A
 
     def __calc_B(self, h):
@@ -98,6 +103,7 @@ class Spline:
         B = np.zeros(self.nx)
         for i in range(self.nx - 2):
             B[i+1] = 3.0*(self.a[i+2] - self.a[i+1])/h[i+1] - 3.0*(self.a[i+1] - self.a[i])/h[i]
+        # print(B)
         return B
 
 class Spline2D:
@@ -108,13 +114,15 @@ class Spline2D:
         self.s = self.__calc_s(x, y)
         self.sx = Spline(self.s, x)
         self.sy = Spline(self.s, y)
-    
+    # x = [0.0, 0.0, 2.0, 2.0, 4.0, 4.0, 6.0, 6.0]
+    # y = [0.0, 10.0, 10.0, 0.0, 0.0, 10.0, 10.0, 0.0]
     def __calc_s(self, x, y):
         dx = np.diff(x)
         dy = np.diff(y)
         self.ds = np.hypot(dx, dy)
         s = [0]
         s.extend(np.cumsum(self.ds))
+        # print(s)
         return s
 
     def calc_position(self, s):
@@ -154,13 +162,13 @@ def calc_spline_course(x, y, ds=0.1):
 if __name__ == "__main__":
     print("Spline 2D test")
     import matplotlib.pyplot as plt
-    x = [0.0, 0.0, 2.0, 2.0, 4.0, 4.0, 6.0, 6.0]
-    y = [0.0, 10.0, 10.0, 0.0, 0.0, 10.0, 10.0, 0.0]
-    # path = [[100.0, 5001
+    x = [-2.5, 0.0, 2.5, 5.0, 7.5, 3.0, -1.0]
+    y = [0.7, -6, 5, 6.5, 0.0, 5.0, -2.0]
     ds = 0.1  # [m] distance of each intepolated points
 
     sp = Spline2D(x, y)
     s = np.arange(0, sp.s[-1], ds)
+    # print(sp.s[-1])
 
     rx, ry, ryaw, rk = [], [], [], []
     for i_s in s:

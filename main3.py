@@ -1,4 +1,6 @@
+from ctypes import sizeof
 from operator import length_hint
+import re
 from tkinter import W
 import numpy as np
 import math
@@ -45,8 +47,6 @@ class LeaderUAV:
             v = v + (fao*rot)@vao
         return v
 
-
-
     def control_signal(self, ref, obs):
         v1 = self.move_to_goal(ref)
         v2 = self.avoid_obstacle(obs)
@@ -59,9 +59,10 @@ class LeaderUAV:
         self.path.append(self.pos)
 
 class FollowerUAV:
-    def __init__(self, pos=[0,0,0], leader=None, delta=[0,0]):
+    def __init__(self, pos=[0,0,0], leader=None, delta=[0,0], wp= None):
         # Configuration
         self.pos = np.array(pos)
+        self.wp = wp
         self.heading = 0
         self.angle = []
         self.m = 0
@@ -95,22 +96,27 @@ class FollowerUAV:
 
 
     def keep_formation(self, ref):
-        self.m=self.m+1
         xr = np.cos(self.leader.heading)*self.delta[0] - np.sin(self.leader.heading)*self.delta[1] + ref[0]
         yr = np.sin(self.leader.heading)*self.delta[0] + np.cos(self.leader.heading)*self.delta[1] + ref[1]
         zr = ref[2]
-        pr = np.array([xr, yr, zr]) 
-        waypoint = np.array([-58.25228023483275, 29.250089440097742])
-        waypoint1 = np.array([-47.031115789880786, 33.96398376090513])
-        wk =math.sqrt((xr-waypoint[0])**2 + (yr-waypoint[1])**2 )
-        wk1 =math.sqrt((xr-waypoint1[0])**2 + (yr-waypoint1[1])**2 )
+        pr = np.array([xr, yr, zr])
         dk = math.sqrt((xr-self.pos[0])**2 + (yr-self.pos[1])**2 + (zr-self.pos[2])**2)
         vkf = (pr-self.pos)/dk# Velocity move to goal
-        if (wk < 10 or wk1 <10) and abs(yr)<abs(ref[1]):
-            vkf = vkf/7
-            
-        # if dk>1 and dk <2:
-        #     vkf = 0
+        for i in range(1,len(self.wp)-1):
+            # wk =math.sqrt((xr-waypoint[0])**2 + (yr-waypoint[1])**2)
+            wk = math.sqrt((xr-self.wp[i][0])**2 + (yr-self.wp[i][1])**2)     
+            if (wk < 7.5) and abs(yr) < abs(ref[1])-1 :
+                vkf = vkf/4
+            else:
+                vkf= vkf
+            # wk1 =math.sqrt((xr-waypoint1[0])**2 + (yr-waypoint1[1])**2 )
+            # wk2 =math.sqrt((xr-waypoint2[0])**2 + (yr-waypoint2[1])**2 )
+            # wk3 =math.sqrt((xr-waypoint3[0])**2 + (yr-waypoint3[1])**2 )
+        # dk = math.sqrt((xr-self.pos[0])**2 + (yr-self.pos[1])**2 + (zr-self.pos[2])**2)
+        # vkf = (pr-self.pos)/dk# Velocity move to goal
+        # if (wk < 10 or wk1 <10 or wk2 <10 or wk3<10) and abs(yr)<abs(ref[1])-2:
+        #     vkf = vkf/8
+
         fkf = self.am              # Control parameter of vm2g
         if dk <= self.bm:
             fkf = self.am*dk/self.bm
@@ -187,7 +193,7 @@ def calculateover(width,length,percen):
 
 
 if __name__ == "__main__":
-    dt = 0.1  # time step
+    dt = 0.5  # time step
     
     # # Get convex polygon
 
@@ -232,11 +238,12 @@ if __name__ == "__main__":
 
     K.append(K[0])
     ox, oy = zip(*K)
+    pt = map.point
 
     # Formation processing
     leader = LeaderUAV(pos=[x_start,y_start,0])
-    follower1 = FollowerUAV(pos=[x_start,y_start,0],leader=leader, delta=[-offsetx,-offsety])
-    follower2 = FollowerUAV(pos=[x_start,y_start,0],leader=leader, delta=[-offsetx, offsety])
+    follower1 = FollowerUAV(pos=[x_start,y_start,0],leader=leader, delta=[-offsetx,-offsety],wp = pt )
+    follower2 = FollowerUAV(pos=[x_start,y_start,0],leader=leader, delta=[-offsetx, offsety],wp = pt)
     x_traj, y_traj = [], []
     print(len(map.traj[0]))
     for i in range(len(map.traj[0])):
@@ -279,6 +286,9 @@ if __name__ == "__main__":
     plt.figure()
     ax = plt.axes(projection ='3d')
     ax.plot(map.ox, map.oy, np.ones(len(map.ox))*map.altitude, '-xk', label='range')
+
+    # ax.plot(map.s,[np.rad2deg(iyaw) for iyaw in map.ryaw], "-r", label="yaw")
+    # ax.plot(map.s, map.rk, "-r", label="curvature")
     ax.plot(map.traj[0,:], map.traj[1,:], map.traj[2,:], '-b', label='reference')
 
     # plot obstacle

@@ -59,10 +59,11 @@ class LeaderUAV:
         self.path.append(self.pos)
 
 class FollowerUAV:
-    def __init__(self, pos=[0,0,0], leader=None, delta=[0,0]):
+    def __init__(self, pos=[0,0,0], leader=None, delta=[0,0],wp= None):
         # Configuration
         self.pos = np.array(pos)
         self.heading = 0
+        self.wp = wp
         if leader == None:
             self.leader = LeaderUAV()
         else:
@@ -96,9 +97,24 @@ class FollowerUAV:
         xr = np.cos(self.leader.heading)*self.delta[0] - np.sin(self.leader.heading)*self.delta[1] + ref[0]
         yr = np.sin(self.leader.heading)*self.delta[0] + np.cos(self.leader.heading)*self.delta[1] + ref[1]
         zr = ref[2]
-        pr = np.array([xr, yr, zr]) 
+        pr = np.array([xr, yr, zr])
         dk = math.sqrt((xr-self.pos[0])**2 + (yr-self.pos[1])**2 + (zr-self.pos[2])**2)
-        vkf = (pr-self.pos)/dk     # Velocity move to goal
+        vkf = (pr-self.pos)/dk# Velocity move to goal
+        for i in range(1,len(self.wp)-1):
+            # wk =math.sqrt((xr-waypoint[0])**2 + (yr-waypoint[1])**2)
+            wk = math.sqrt((xr-self.wp[i][0])**2 + (yr-self.wp[i][1])**2)     
+            if (wk > 10 and wk < 13) and abs(yr) < abs(ref[1])-1 :
+                vkf = vkf/4
+            else:
+                vkf= vkf
+            # wk1 =math.sqrt((xr-waypoint1[0])**2 + (yr-waypoint1[1])**2 )
+            # wk2 =math.sqrt((xr-waypoint2[0])**2 + (yr-waypoint2[1])**2 )
+            # wk3 =math.sqrt((xr-waypoint3[0])**2 + (yr-waypoint3[1])**2 )
+        # dk = math.sqrt((xr-self.pos[0])**2 + (yr-self.pos[1])**2 + (zr-self.pos[2])**2)
+        # vkf = (pr-self.pos)/dk# Velocity move to goal
+        # if (wk < 10 or wk1 <10 or wk2 <10 or wk3<10) and abs(yr)<abs(ref[1])-2:
+        #     vkf = vkf/8
+
         fkf = self.am              # Control parameter of vm2g
         if dk <= self.bm:
             fkf = self.am*dk/self.bm
@@ -125,7 +141,7 @@ class FollowerUAV:
         v2 = 1.3*self.avoid_obstacle(obs)
         v3 = self.avoid_Robot(rbt_pos)
         if v2[0]== 0:
-            v1 = 1.3*v1
+            v1 = 1.4*v1
         else:
             v1=v1
         return v1 +v2+v3
@@ -219,13 +235,14 @@ if __name__ == "__main__":
 
     K.append(K[0])
     ox, oy = zip(*K)
+    pt = map.point
 
     # Formation processing
     leader = LeaderUAV(pos=[x_start,y_start,0])
-    follower1 = FollowerUAV(pos=[x_start+5,y_start+5,0],leader=leader, delta=[-offsetx,-offsety])
-    follower2 = FollowerUAV(pos=[x_start-5,y_start-5,0],leader=leader, delta=[-offsetx, offsety])
-    follower3 = FollowerUAV(pos=[x_start-7,y_start-7,0],leader=leader, delta=[-2*offsetx, -2*offsety])
-    follower4 = FollowerUAV(pos=[x_start-8,y_start-8,0],leader=leader, delta=[-2*offsetx, 2*offsety])
+    follower1 = FollowerUAV(pos=[x_start+5,y_start+5,0],leader=leader, delta=[-offsetx,-offsety],wp = pt)
+    follower2 = FollowerUAV(pos=[x_start-5,y_start-5,0],leader=leader, delta=[-offsetx, offsety],wp = pt)
+    follower3 = FollowerUAV(pos=[x_start-7,y_start-7,0],leader=leader, delta=[-2*offsetx, -2*offsety],wp = pt)
+    follower4 = FollowerUAV(pos=[x_start-8,y_start-8,0],leader=leader, delta=[-2*offsetx, 2*offsety],wp = pt)
     x_traj, y_traj = [], []
     for i in range(len(map.traj[0])):
         ref = map.traj[:,i]
