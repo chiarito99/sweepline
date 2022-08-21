@@ -38,7 +38,6 @@ class Spline:
         i = self.__search_index(t)
         # print(i)
         dx = t - self.x[i]
-        print(dx)
         result = self.a[i] + self.b[i]*dx + self.c[i]*dx**2.0 + self.d[i]*dx**3.0
         return result
 

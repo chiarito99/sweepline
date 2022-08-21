@@ -1,5 +1,6 @@
+from cmath import nan
 from ctypes import sizeof
-from operator import length_hint
+from operator import le, length_hint
 import re
 from tkinter import W
 import numpy as np
@@ -11,6 +12,7 @@ from env import Env
 from sklearn.metrics import jaccard_score
 from sweep_line_has_bad import getConvexPolygon,computeWLofCamera
 
+global flag,err1,err2,cons,a,f1,f2,vleader
 class LeaderUAV:
     def __init__(self, pos=[0,0,0]):
         # Configuration
@@ -23,6 +25,7 @@ class LeaderUAV:
         self.bm = 1.0
         self.ao = 3.0
         self.bo = 4.0
+        self.do = 1.5
 
 
     def move_to_goal(self, goal):
@@ -47,10 +50,13 @@ class LeaderUAV:
             v = v + (fao*rot)@vao
         return v
 
-    def control_signal(self, ref, obs):
+    def control_signal(self, ref, obs,flag,err1,err2):
         v1 = self.move_to_goal(ref)
+        if flag == 1:
+            v1= 1/(self.do*max(err1-cons,err2-cons)) * v1
+            if max(err1-cons,err2-cons) < self.do:
+                v1 =  self.bm*max(err1-cons,err2-cons)/self.am * v1
         v2 = self.avoid_obstacle(obs)
-        # print(v1+v2)
         return v1 + v2
     
     def update_position(self, vel, dt=0.1):
@@ -95,27 +101,27 @@ class FollowerUAV:
 
 
 
-    def keep_formation(self, ref):
+    def keep_formation(self, ref,flag,a,f1):
+        # print(a)
         xr = np.cos(self.leader.heading)*self.delta[0] - np.sin(self.leader.heading)*self.delta[1] + ref[0]
         yr = np.sin(self.leader.heading)*self.delta[0] + np.cos(self.leader.heading)*self.delta[1] + ref[1]
         zr = ref[2]
         pr = np.array([xr, yr, zr])
+        phi1=0
+        f1 = pr -self.pos
+        # print(f1)
+        phi1 = np.arccos((f1[0]*a[0]+f1[1]*a[1])/((np.hypot(f1[0],f1[1]))*(np.hypot(a[0],a[1]))))
+        if phi1 == nan:
+            phi1=0
         dk = math.sqrt((xr-self.pos[0])**2 + (yr-self.pos[1])**2 + (zr-self.pos[2])**2)
         vkf = (pr-self.pos)/dk# Velocity move to goal
         for i in range(1,len(self.wp)-1):
             # wk =math.sqrt((xr-waypoint[0])**2 + (yr-waypoint[1])**2)
             wk = math.sqrt((xr-self.wp[i][0])**2 + (yr-self.wp[i][1])**2)     
-            if (wk < 7.5) and abs(yr) < abs(ref[1])-1 :
-                vkf = vkf/4
+            if (3 <wk < 9.5) and  (phi1 > np.pi/2 or flag ==2):
+                vkf = vleader/75
             else:
                 vkf= vkf
-            # wk1 =math.sqrt((xr-waypoint1[0])**2 + (yr-waypoint1[1])**2 )
-            # wk2 =math.sqrt((xr-waypoint2[0])**2 + (yr-waypoint2[1])**2 )
-            # wk3 =math.sqrt((xr-waypoint3[0])**2 + (yr-waypoint3[1])**2 )
-        # dk = math.sqrt((xr-self.pos[0])**2 + (yr-self.pos[1])**2 + (zr-self.pos[2])**2)
-        # vkf = (pr-self.pos)/dk# Velocity move to goal
-        # if (wk < 10 or wk1 <10 or wk2 <10 or wk3<10) and abs(yr)<abs(ref[1])-2:
-        #     vkf = vkf/8
 
         fkf = self.am              # Control parameter of vm2g
         if dk <= self.bm:
@@ -139,13 +145,13 @@ class FollowerUAV:
     
 
     def control_signal(self, ref, obs,rbt_pos):
-        v1 = self.keep_formation(ref)
-        v2 = 1.3*self.avoid_obstacle(obs)
+        v1 = self.keep_formation(ref,flag,a,f1)
+        v2 = 1.2*self.avoid_obstacle(obs)
         v3 = self.avoid_Robot(rbt_pos)
-        if v2[1] == 0 :
+        if v2[1] == 0 and flag == 0 :
             v1 = 1.3*v1
         else:
-            v1= 1*v1
+            v1 = v1
         return v1+v2+v3
     
     def update_position(self, vel, dt=0.1):
@@ -195,25 +201,6 @@ def calculateover(width,length,percen):
 if __name__ == "__main__":
     dt = 0.5  # time step
     
-    # # Get convex polygon
-
-    # n_vertices = 5
-    # polygon_radius = 40
-    # rad_var = 1
-    # ang_var = 1
-    # dx = 2
-    # transl_spd = 10
-    # rot_spd = np.pi/4
-
-    # samplingx0 = -80
-    # samplingx1 = 80
-    # samplingy0 = -80
-    # samplingy1 = 80
-
-    # x_start = (samplingx1- samplingx0) * np.random.rand() + samplingx0
-    # y_start = (samplingy1- samplingy0) * np.random.rand() + samplingy0
-    # x_end = (samplingx1- samplingx0) * np.random.rand() + samplingx0
-    # y_end = (samplingy1- samplingy0) * np.random.rand() + samplingy0
 
     x_start = -80
     y_start = -80
@@ -224,8 +211,6 @@ if __name__ == "__main__":
     # print(K)
     K = [[58.98295314305732, -40.46389776524755], [-19.5748849118947, -78.531936254165], [-62.674712335622026, 24.06481669719506], [-31.09947113556031, 61.08658069805723], [52.20911077098446, 26.412130624396212]]
     # Map and reference path generation
-    # ox = [0.0, 50.0, 50.0, 0.0, 0.0]
-    # oy = [0.0, 0.0, 60.0, 60.0, 0.0]
     # Calculate L&W of one Camera
     alpha = 0.15 # Góc máy  chiều rộng
     beta = 0.22 # GÓc máy chiều 
@@ -234,25 +219,32 @@ if __name__ == "__main__":
     width , length = computeWLofCamera(altitude,alpha,beta)
     xxx = overlap(width,length,percenoverlap)
     offsetx,offsety,resolution = calculateover(width,length,xxx)
+    disLF = np.hypot(offsetx,offsety)
+    cons =disLF
     map = Env(K,x_start,y_start,x_end,y_end,altitude,resolution)
-
+    flag = 0
+    err1 = 0
+    err2 = 0
+    a = [0]
+    f1 = [0]
+    f2 = [0]
     K.append(K[0])
     ox, oy = zip(*K)
     pt = map.point
 
     # Formation processing
     leader = LeaderUAV(pos=[x_start,y_start,0])
-    follower1 = FollowerUAV(pos=[x_start,y_start,0],leader=leader, delta=[-offsetx,-offsety],wp = pt )
+    follower1 = FollowerUAV(pos=[x_start,y_start,0],leader=leader, delta=[-offsetx,-offsety],wp = pt)
     follower2 = FollowerUAV(pos=[x_start,y_start,0],leader=leader, delta=[-offsetx, offsety],wp = pt)
     x_traj, y_traj = [], []
     print(len(map.traj[0]))
     for i in range(len(map.traj[0])):
         ref = map.traj[:,i]
-        x_traj.append(ref[0])
-        # print(x_traj)
-        y_traj.append(ref[1])
-        # print()
-        # Check if the traj is colision
+        a = ref-a
+        # x_traj.append(ref[0])
+        # # print(x_traj)
+        # y_traj.append(ref[1])
+        # # print()
         is_colision = False
         for i in range(len(map.obs)):
             do = math.sqrt((ref[0]-map.obs[i,0])**2 + (ref[1]-map.obs[i,1])**2)
@@ -264,17 +256,27 @@ if __name__ == "__main__":
             continue
         rbt_pos = np.array([follower1.pos,follower2.pos])
         # UAV processing
-        lvel = leader.control_signal(ref, map.obs)
+        lvel = leader.control_signal(ref, map.obs,flag,err1,err2)
         f1vel = follower1.control_signal(ref, map.obs,rbt_pos)
         f2vel = follower2.control_signal(ref, map.obs,rbt_pos)
         # if(i%80 > 60):
         #     f1vel = f1vel / 2
-
-
         # UAV update
         leader.update_position(lvel)
+        a = leader.pos
+        vleader = lvel
+        # print(leader.pos-a)
+        # print(follower1.pos - b)
         follower1.update_position(f1vel)
         follower2.update_position(f2vel)
+        err1= np.hypot((leader.pos[0]-follower1.pos[0]),(leader.pos[1]-follower1.pos[1]))
+        err2 = np.hypot((leader.pos[0]-follower2.pos[0]),(leader.pos[1]-follower2.pos[1]))
+        if err1+err2- 2*disLF > 0.7 and err1+err2- 2*disLF < 1.5 :
+            flag = 1
+        elif abs(leader.heading - follower1.heading) >np.pi/2 or abs(leader.heading - follower2.heading) >np.pi/2 :
+            flag = 2
+        else:
+            flag=0
 
     # # print(leader.path)
     # print(follower1.angle)

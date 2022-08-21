@@ -31,8 +31,8 @@ class Env:
         si = path.shape[0] - 1
         for i in range(si):
             for k in range(0,30):
-                xk = path[i][0]- k/30*(path[i][0]-path[i+1][0])
-                yk = path[i][1]- k/30*(path[i][1]-path[i+1][1])
+                xk = path[i][0]- k/34*(path[i][0]-path[i+1][0])
+                yk = path[i][1]- k/34*(path[i][1]-path[i+1][1])
                 px.append(xk)
                 py.append(yk)
         ds = 0.5  # [m] distance of each intepolated points

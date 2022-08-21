@@ -1,263 +1,329 @@
-"""
-Cubic Spline library on python
-author Atsushi Sakai
-"""
-import bisect
-import math
-
+from ctypes import sizeof
+from operator import length_hint
+import re
+from tkinter import W
 import numpy as np
+import math
+import matplotlib.pyplot as plt
+from mpl_toolkits import mplot3d
+from Plotting3 import Plotting
+from env import Env
+from sklearn.metrics import jaccard_score
+from sweep_line_has_bad import getConvexPolygon,computeWLofCamera
+
+class LeaderUAV:
+    def __init__(self, pos=[0,0,0]):
+        # Configuration
+        self.pos = np.array(pos)
+        self.heading = 0
+        self.path = [self.pos]
+
+        # Control parameters
+        self.am = 3.8
+        self.bm = 1.0
+        self.ao = 3.0
+        self.bo = 4.0
 
 
-class Spline:
-    """
-    Cubic Spline class
-    """
+    def move_to_goal(self, goal):
+        dm = math.sqrt((goal[0]-self.pos[0])**2 + (goal[1]-self.pos[1])**2 + (goal[2]-self.pos[2])**2)
+        vm2g = (goal-self.pos)/dm    # Velocity move to goal
+        fm2g = self.am               # Control parameter of vm2g
+        if dm <= self.bm:
+            fm2g = self.am*dm/self.bm
+        print(flag)
+        return 2.3*fm2g*vm2g
 
-    def __init__(self, x, y):
-        self.b, self.c, self.d, self.w = [], [], [], []
+    def avoid_obstacle(self, obs):
+        v = np.zeros(np.size(self.pos))
+        for i in range(len(obs)):
+            do = math.sqrt((obs[i,0]-self.pos[0])**2 + (obs[i,1]-self.pos[1])**2) - obs[i,2] - 0.5
+            vao = (obs[i,:2]-self.pos[:2])/do          # Velocity avoiding obstacle
+            sig = -np.sign(vao[0]*math.sin(self.heading)-vao[1]*math.cos(self.heading))
+            rot = np.array([[0,-sig,0],[sig,0,0],[0,0,1]])
+            fao = 0
+            vao = np.array([vao[0],vao[1],0])
+            if do <= self.bo :
+                fao = self.ao*(1-do/self.bo)
+            v = v + (fao*rot)@vao
+        return v
 
-        self.x = x
-        self.y = y
+    def control_signal(self, ref, obs,flag):
+        v1 = self.move_to_goal(ref)
+        if flag == 1:
+            v1=v1/6
+        v2 = self.avoid_obstacle(obs)
+        # print(v1+v2)
+        return v1 + v2
+    
+    def update_position(self, vel, dt=0.1):
+        self.pos = self.pos + vel*dt
+        self.heading = (np.arctan2(vel[1], vel[0]) + np.pi) %(2*np.pi)-np.pi
+        self.path.append(self.pos)
 
-        self.nx = len(x)  # dimension of x
-        h = np.diff(x)
+class FollowerUAV:
+    def __init__(self, pos=[0,0,0], leader=None, delta=[0,0], wp= None):
+        # Configuration
+        self.pos = np.array(pos)
+        self.wp = wp
+        self.heading = 0
+        self.angle = []
+        self.m = 0
+        if leader == None:
+            self.leader = LeaderUAV()
+        else:
+            self.leader = leader
+        self.delta = delta
+        self.path = [self.pos]
 
-        # calc coefficient c
-        self.a = [iy for iy in y]
-
-        # calc coefficient c
-        A = self.__calc_A(h)
-        B = self.__calc_B(h)
-        self.c = np.linalg.solve(A, B)
-
-        # calc spline coefficient b and d
-        for i in range(self.nx - 1):
-            self.d.append((self.c[i + 1] - self.c[i]) / (3.0 * h[i]))
-            tb = (self.a[i + 1] - self.a[i]) / h[i] - h[i] * \
-                 (self.c[i + 1] + 2.0 * self.c[i]) / 3.0
-            self.b.append(tb)
-
-    def calc(self, t):
-        """
-        Calc position
-        if t is outside of the input x, return None
-        """
-
-        if t < self.x[0]:
-            return None
-        elif t > self.x[-1]:
-            return None
-
-        i = self.__search_index(t)
-        dx = t - self.x[i]
-        result = self.a[i] + self.b[i] * dx + self.c[i] * dx ** 2.0 + self.d[i] * dx ** 3.0
-
-        return result
-
-    def calc_d(self, t):
-        """
-        Calc first derivative
-        if t is outside of the input x, return None
-        """
-
-        if t < self.x[0]:
-            return None
-        elif t > self.x[-1]:
-            return None
-
-        i = self.__search_index(t)
-        dx = t - self.x[i]
-        result = self.b[i] + 2.0 * self.c[i] * dx + 3.0 * self.d[i] * dx ** 2.0
-        return result
-
-    def calc_dd(self, t):
-        """
-        Calc second derivative
-        """
-
-        if t < self.x[0]:
-            return None
-        elif t > self.x[-1]:
-            return None
-
-        i = self.__search_index(t)
-        dx = t - self.x[i]
-        result = 2.0 * self.c[i] + 6.0 * self.d[i] * dx
-        return result
-
-    def __search_index(self, x):
-        return bisect.bisect(self.x, x) - 1
-
-    def __calc_A(self, h):
-        A = np.zeros((self.nx, self.nx))
-        A[0, 0] = 1.0
-        for i in range(self.nx - 1):
-            if i != (self.nx - 2):
-                A[i + 1, i + 1] = 2.0 * (h[i] + h[i + 1])
-            A[i + 1, i] = h[i]
-            A[i, i + 1] = h[i]
-
-        A[0, 1] = 0.0
-        A[self.nx - 1, self.nx - 2] = 0.0
-        A[self.nx - 1, self.nx - 1] = 1.0
-        #  print(A)
-        return A
-
-    def __calc_B(self, h):
-        """
-        calc matrix B for spline coefficient c
-        """
-        B = np.zeros(self.nx)
-        for i in range(self.nx - 2):
-            B[i + 1] = 3.0 * (self.a[i + 2] - self.a[i + 1]) / \
-                       h[i + 1] - 3.0 * (self.a[i + 1] - self.a[i]) / h[i]
-        #  print(B)
-        return B
-
-    def calc_curvature(self, t):
-        j = int(math.floor(t))
-        if j < 0:
-            j = 0
-        elif j >= len(self.a):
-            j = len(self.a) - 1
-
-        dt = t - j
-        df = self.b[j] + 2.0 * self.c[j] * dt + 3.0 * self.d[j] * dt * dt
-        ddf = 2.0 * self.c[j] + 6.0 * self.d[j] * dt
-        k = ddf / ((1 + df ** 2) ** 1.5)
-        return k
+        # Control parameters
+        self.am = 3.3
+        self.bm = 1.0
+        self.ao = 3.0
+        self.bo = 4.0
 
 
-class Spline2D:
-    """
-    2D Cubic Spline class
-    """
-
-    def __init__(self, x, y):
-        self.s = self.__calc_s(x, y)
-        self.sx = Spline(self.s, x)
-        self.sy = Spline(self.s, y)
-
-    def __calc_s(self, x, y):
-        dx = np.diff(x)
-        dy = np.diff(y)
-        self.ds = [math.sqrt(idx ** 2 + idy ** 2)
-                   for (idx, idy) in zip(dx, dy)]
-        s = [0.0]
-        s.extend(np.cumsum(self.ds))
-        return s
-
-    def calc_position(self, s):
-        """
-        calc position
-        """
-        x = self.sx.calc(s)
-        y = self.sy.calc(s)
-
-        return x, y
-
-    def calc_curvature(self, s):
-        """
-        calc curvature
-        """
-        dx = self.sx.calc_d(s)
-        ddx = self.sx.calc_dd(s)
-        dy = self.sy.calc_d(s)
-        ddy = self.sy.calc_dd(s)
-        k = (ddy * dx - ddx * dy) / (dx ** 2 + dy ** 2) ** 1.5
-        return k
-
-    def calc_yaw(self, s):
-        """
-        calc yaw
-        """
-        dx = self.sx.calc_d(s)
-        dy = self.sy.calc_d(s)
-        yaw = math.atan2(dy, dx)
-        return yaw
+    def avoid_Robot(self,rbt_pos):
+        v = np.zeros(np.size(self.pos))
+        for i in range(len(rbt_pos)):
+            do = math.sqrt((rbt_pos[i,0]-self.pos[0])**2 + (rbt_pos[i,1]-self.pos[1])**2)
+            e=0
+            if do !=0 and do<0.1:
+                e = -(rbt_pos[i,:2]-self.pos[:2])/do
+                vao = np.array([e[0],e[1],0])
+                v=v+vao
+            else:
+                v=v
+        return v
 
 
-def calc_2d_spline_interpolation(x, y, num=100):
-    """
-    Calc 2d spline course with interpolation
-    :param x: interpolated x positions
-    :param y: interpolated y positions
-    :param num: number of path points
-    :return:
-        - x     : x positions
-        - y     : y positions
-        - yaw   : yaw angle list
-        - k     : curvature list
-        - s     : Path length from start point
-    """
-    sp = Spline2D(x, y)
-    s = np.linspace(0, sp.s[-1], num+1)[:-1]
 
-    r_x, r_y, r_yaw, r_k = [], [], [], []
-    for i_s in s:
-        ix, iy = sp.calc_position(i_s)
-        r_x.append(ix)
-        r_y.append(iy)
-        r_yaw.append(sp.calc_yaw(i_s))
-        r_k.append(sp.calc_curvature(i_s))
+    def keep_formation(self, ref):
+        xr = np.cos(self.leader.heading)*self.delta[0] - np.sin(self.leader.heading)*self.delta[1] + ref[0]
+        yr = np.sin(self.leader.heading)*self.delta[0] + np.cos(self.leader.heading)*self.delta[1] + ref[1]
+        zr = ref[2]
+        pr = np.array([xr, yr, zr])
+        dk = math.sqrt((xr-self.pos[0])**2 + (yr-self.pos[1])**2 + (zr-self.pos[2])**2)
+        vkf = (pr-self.pos)/dk# Velocity move to goal
+        for i in range(1,len(self.wp)-1):
+            # wk =math.sqrt((xr-waypoint[0])**2 + (yr-waypoint[1])**2)
+            wk = math.sqrt((xr-self.wp[i][0])**2 + (yr-self.wp[i][1])**2)     
+            if (wk < 7.5) and abs(yr) < abs(ref[1])-1 :
+                vkf = vkf/4
+            else:
+                vkf= vkf
+            # wk1 =math.sqrt((xr-waypoint1[0])**2 + (yr-waypoint1[1])**2 )
+            # wk2 =math.sqrt((xr-waypoint2[0])**2 + (yr-waypoint2[1])**2 )
+            # wk3 =math.sqrt((xr-waypoint3[0])**2 + (yr-waypoint3[1])**2 )
+        # dk = math.sqrt((xr-self.pos[0])**2 + (yr-self.pos[1])**2 + (zr-self.pos[2])**2)
+        # vkf = (pr-self.pos)/dk# Velocity move to goal
+        # if (wk < 10 or wk1 <10 or wk2 <10 or wk3<10) and abs(yr)<abs(ref[1])-2:
+        #     vkf = vkf/8
 
-    travel = np.cumsum([np.hypot(dx, dy) for dx, dy in zip(np.diff(r_x), np.diff(r_y))]).tolist()
-    travel = np.concatenate([[0.0], travel])
+        fkf = self.am              # Control parameter of vm2g
+        if dk <= self.bm:
+            fkf = self.am*dk/self.bm
+        return 2.2*fkf*vkf
 
-    return r_x, r_y, r_yaw, r_k, travel
+    def avoid_obstacle(self, obs):
+        v = np.zeros(np.size(self.pos))
+        for i in range(len(obs)):
+            do = math.sqrt((obs[i,0]-self.pos[0])**2 + (obs[i,1]-self.pos[1])**2) - obs[i,2]-0.5
+            vao = (obs[i,:2]-self.pos[:2])/do          # Velocity avoiding obstacle
+            sig = -np.sign(vao[0]*math.sin(self.heading)-vao[1]*math.cos(self.heading))
+            rot = np.array([[0,-sig,0],[sig,0,0],[0,0,1]])
+            fao = 0
+            vao = np.array([vao[0],vao[1],0])
+            if do <= self.bo :
+                fao = self.ao*(1-do/self.bo)
+            v = v + (fao*rot)@vao
+        return v
+
+    
+
+    def control_signal(self, ref, obs,rbt_pos):
+        v1 = self.keep_formation(ref)
+        v2 = 1.3*self.avoid_obstacle(obs)
+        v3 = self.avoid_Robot(rbt_pos)
+        if v2[1] == 0 :
+            v1 = 1.3*v1
+        else:
+            v1= 1*v1
+        return v1+v2+v3
+    
+    def update_position(self, vel, dt=0.1):
+        self.heading =(np.arctan2(vel[1], vel[0]) + np.pi) %(2*np.pi)-np.pi
+        self.angle.append(self.heading)
+        self.pos = self.pos + vel*dt
+        self.path.append(self.pos)
 
 
-def test_spline2d():
-    print("Spline 2D test")
-    import matplotlib.pyplot as plt
-    input_x = [-2.5, 0.0, 2.5, 5.0, 7.5, 3.0, -1.0]
-    input_y = [0.7, -6, 5, 6.5, 0.0, 5.0, -2.0]
 
-    x, y, yaw, k, travel = calc_2d_spline_interpolation(input_x, input_y, num=200)
+def plot_obstacles(ox, oy, oz, r):
+    z = np.linspace(0, oz, 50)
+    theta = np.linspace(0, 2*np.pi, 50)
+    theta_grid, z_grid=np.meshgrid(theta, z)
+    x_grid = r*np.cos(theta_grid) + ox
+    y_grid = r*np.sin(theta_grid) + oy
+    return x_grid,y_grid,z_grid
 
-    plt.subplots(1)
-    plt.plot(input_x, input_y, "xb", label="input")
-    plt.plot(x, y, "-r", label="spline")
-    plt.grid(True)
-    plt.axis("equal")
-    plt.xlabel("x[m]")
-    plt.ylabel("y[m]")
-    plt.legend()
+def giaiPTBac2(a, b, c):
+    delta = b * b - 4 * a * c
+    if (delta > 0):
+        x1 = (float)((-b + math.sqrt(delta)) / (2 * a));
+        x2 = (float)((-b - math.sqrt(delta)) / (2 * a));
+    elif (delta == 0):
+        x1 = (-b / (2 * a))
+    else:
+        print("Phương trình vô nghiệm!")
+    return x1,x2
 
-    plt.subplots(1)
-    plt.plot(travel, [math.degrees(i_yaw) for i_yaw in yaw], "-r", label="yaw")
-    plt.grid(True)
-    plt.legend()
-    plt.xlabel("line length[m]")
-    plt.ylabel("yaw angle[deg]")
+def overlap(width,length,percenoverlap):
+    indicator = (percenoverlap *width *length)/(2*width *length*2)
+    x1,x2 = giaiPTBac2(-1,1,-indicator)
+    if x1<x2:
+        return x1
+    else:
+        return x2
 
-    plt.subplots(1)
-    plt.plot(travel, k, "-r", label="curvature")
-    plt.grid(True)
-    plt.legend()
-    plt.xlabel("line length[m]")
-    plt.ylabel("curvature [1/m]")
+def calculateover(width,length,percen):
+    width_s = width * percen
+    length_s = length * percen
+    offset_x = width - width_s
+    offset_y = length - length_s
+    resolution = 2*(offset_y + length/2)-length_s
+    return offset_x,offset_y,resolution
 
+
+if __name__ == "__main__":
+    dt = 0.5  # time step
+    
+    # # Get convex polygon
+
+    # n_vertices = 5
+    # polygon_radius = 40
+    # rad_var = 1
+    # ang_var = 1
+    # dx = 2
+    # transl_spd = 10
+    # rot_spd = np.pi/4
+
+    # samplingx0 = -80
+    # samplingx1 = 80
+    # samplingy0 = -80
+    # samplingy1 = 80
+
+    # x_start = (samplingx1- samplingx0) * np.random.rand() + samplingx0
+    # y_start = (samplingy1- samplingy0) * np.random.rand() + samplingy0
+    # x_end = (samplingx1- samplingx0) * np.random.rand() + samplingx0
+    # y_end = (samplingy1- samplingy0) * np.random.rand() + samplingy0
+
+    x_start = -80
+    y_start = -80
+    x_end = 80
+    y_end = 80
+    # M, Mshifted= getConvexPolygon(n_vertices,polygon_radius,rad_var,ang_var)
+    # K = M.tolist()
+    # print(K)
+    K = [[58.98295314305732, -40.46389776524755], [-19.5748849118947, -78.531936254165], [-62.674712335622026, 24.06481669719506], [-31.09947113556031, 61.08658069805723], [52.20911077098446, 26.412130624396212]]
+    # Map and reference path generation
+    # ox = [0.0, 50.0, 50.0, 0.0, 0.0]
+    # oy = [0.0, 0.0, 60.0, 60.0, 0.0]
+    # Calculate L&W of one Camera
+    alpha = 0.15 # Góc máy  chiều rộng
+    beta = 0.22 # GÓc máy chiều 
+    altitude = 20
+    percenoverlap = 0.3
+    width , length = computeWLofCamera(altitude,alpha,beta)
+    xxx = overlap(width,length,percenoverlap)
+    offsetx,offsety,resolution = calculateover(width,length,xxx)
+    disLF = np.hypot(offsetx,offsety)
+    map = Env(K,x_start,y_start,x_end,y_end,altitude,resolution)
+    flag = 0
+
+    K.append(K[0])
+    ox, oy = zip(*K)
+    pt = map.point
+
+    # Formation processing
+    leader = LeaderUAV(pos=[x_start,y_start,0])
+    follower1 = FollowerUAV(pos=[x_start,y_start,0],leader=leader, delta=[-offsetx,-offsety],wp = pt )
+    follower2 = FollowerUAV(pos=[x_start,y_start,0],leader=leader, delta=[-offsetx, offsety],wp = pt)
+    x_traj, y_traj = [], []
+    print(len(map.traj[0]))
+    for i in range(len(map.traj[0])):
+        ref = map.traj[:,i]
+        x_traj.append(ref[0])
+        # print(x_traj)
+        y_traj.append(ref[1])
+        # print()
+        # Check if the traj is colision
+        is_colision = False
+        for i in range(len(map.obs)):
+            do = math.sqrt((ref[0]-map.obs[i,0])**2 + (ref[1]-map.obs[i,1])**2)
+            bias = 2.0
+            if do <= map.obs[i,2] + bias:
+                is_colision = True
+                break
+        if is_colision:
+            continue
+        rbt_pos = np.array([follower1.pos,follower2.pos])
+        # UAV processing
+        lvel = leader.control_signal(ref, map.obs,flag)
+        f1vel = follower1.control_signal(ref, map.obs,rbt_pos)
+        f2vel = follower2.control_signal(ref, map.obs,rbt_pos)
+        # if(i%80 > 60):
+        #     f1vel = f1vel / 2
+
+
+        # UAV update
+        leader.update_position(lvel)
+        follower1.update_position(f1vel)
+        follower2.update_position(f2vel)
+        err1= np.hypot((leader.pos[0]-follower1.pos[0]),(leader.pos[1]-follower1.pos[1]))
+        err2 = np.hypot((leader.pos[0]-follower2.pos[0]),(leader.pos[1]-follower2.pos[1]))
+        if err1+err2-2*disLF > 1:
+            flag = 1
+        else:
+            flag = 0
+
+    # # print(leader.path)
+    # print(follower1.angle)
+    plot= Plotting("formation")
+    plot.plot_animation(leader.path,follower1.path,follower2.path,ox, oy,x_start,y_start,x_end,y_end,length,width,map.obs)
     plt.show()
+    
+    # Plotting
+    plt.figure()
+    ax = plt.axes(projection ='3d')
+    ax.plot(map.ox, map.oy, np.ones(len(map.ox))*map.altitude, '-xk', label='range')
 
+    # ax.plot(map.s,[np.rad2deg(iyaw) for iyaw in map.ryaw], "-r", label="yaw")
+    # ax.plot(map.s, map.rk, "-r", label="curvature")
+    ax.plot(map.traj[0,:], map.traj[1,:], map.traj[2,:], '-b', label='reference')
 
-def test_spline():
-    print("Spline test")
-    import matplotlib.pyplot as plt
-    x = [-0.5, 0.0, 0.5, 1.0, 1.5]
-    y = [3.2, 2.7, 6, 5, 6.5]
+    # plot obstacle
+    for i in range(len(map.obs)):
+        Xc, Yc, Zc = plot_obstacles(map.obs[i,0], map.obs[i,1], 1.2*map.altitude, map.obs[i,2])
+        ax.plot_surface(Xc, Yc, Zc, alpha=0.5)
 
-    spline = Spline(x, y)
-    rx = np.arange(-2.0, 4, 0.01)
-    ry = [spline.calc(i) for i in rx]
+    leader.path = np.array(leader.path)
+    follower1.path = np.array(follower1.path)
+    follower2.path = np.array(follower2.path)
 
-    plt.plot(x, y, "xb")
-    plt.plot(rx, ry, "-r")
-    plt.grid(True)
-    plt.axis("equal")
+    # follower2.path = np.array(follower2.path)
+    ax.plot(leader.path[:,0], leader.path[:,1], leader.path[:,2], '--r', label='leader UAV')
+    ax.plot(follower1.path[:,0], follower1.path[:,1], follower1.path[:,2], '--c', label='follower 1 UAV')
+    ax.plot(follower2.path[:,0], follower2.path[:,1], follower2.path[:,2], '--g', label='follower 2 UAV')
+
+    ax.plot(map.traj[0,0], map.traj[1,0], map.traj[2,0], 'ks', label='start')    # start
+    ax.plot(map.traj[0,-1], map.traj[1,-1], map.traj[2,-1], 'ko', label='end')    # end
+    
+
+    ax.set_title("Forest rangers")
+    ax.grid(True)
+    ax.set_xlabel('x [m]')
+    ax.set_ylabel('y [m]')
+    ax.set_zlabel('z [m]')
+    ax.legend()
     plt.show()
-
-
-if __name__ == '__main__':
-    test_spline()
-    test_spline2d()
