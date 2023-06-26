@@ -9,6 +9,7 @@ from Plotting5 import Plotting
 from env import Env
 from sklearn.metrics import jaccard_score
 from sweep_line_has_bad import getConvexPolygon,computeWLofCamera
+import random
 global flag,err1,err2,cons,a,f1,f2,vleader
 class LeaderUAV:
     def __init__(self, pos=[0,0,0]):
@@ -99,7 +100,7 @@ class FollowerUAV:
 
 
     def keep_formation(self, ref,flag,a,f1):
-        print(a)
+        # print(a)
         xr = np.cos(self.leader.heading)*self.delta[0] - np.sin(self.leader.heading)*self.delta[1] + ref[0]
         yr = np.sin(self.leader.heading)*self.delta[0] + np.cos(self.leader.heading)*self.delta[1] + ref[1]
         zr = ref[2]
@@ -201,14 +202,16 @@ if __name__ == "__main__":
     y_start = -80
     x_end = 80
     y_end = 80
+    # K = [[58.98295314305732, -40.46389776524755], [-19.5748849118947, -78.531936254165], [-62.674712335622026, 24.06481669719506], [-31.09947113556031, 61.08658069805723], [52.20911077098446, 26.412130624396212]]
     K = [[58.98295314305732, -40.46389776524755], [-19.5748849118947, -78.531936254165], [-62.674712335622026, 24.06481669719506], [-31.09947113556031, 61.08658069805723], [52.20911077098446, 26.412130624396212]]
-
     # Calculate L&W of one Camera
     alpha = 0.15 # Góc máy  chiều rộng
     beta = 0.22 # GÓc máy chiều 
     altitude = 20
     percenoverlap = 0.3
     width , length = computeWLofCamera(altitude,alpha,beta)
+    # width  = 11
+    # length = 10
     xxx = overlap(width,length,percenoverlap)
     offsetx,offsety,resolution = calculateover(width,length,xxx)
     disLF = np.hypot(offsetx,offsety)
@@ -226,6 +229,7 @@ if __name__ == "__main__":
     f1 = [0]
     f2 = [0]
     # Formation processing
+    print(random.randint(-10,10))
     leader = LeaderUAV(pos=[x_start,y_start,0])
     follower1 = FollowerUAV(pos=[x_start,y_start,0],leader=leader, delta=[-offsetx,-offsety],wp = pt)
     follower2 = FollowerUAV(pos=[x_start,y_start,0],leader=leader, delta=[-offsetx, offsety],wp = pt)
@@ -276,9 +280,10 @@ if __name__ == "__main__":
         else:
             flag = 0
     # # print(leader.path)
+    # print(map.obs)
     plot= Plotting("formation")
-    plot.plot_animation(leader.path,follower1.path,follower2.path,follower3.path,follower4.path,ox, oy,x_start,y_start,x_end,y_end,length,width,map.obs)
-    plt.show()
+    # plot.plot_animation(leader.path,follower1.path,follower2.path,follower3.path,follower4.path,ox, oy,x_start,y_start,x_end,y_end,length,width,map.obs,0.5)
+    # plt.show()
     
     # Plotting
     plt.figure()
@@ -287,9 +292,9 @@ if __name__ == "__main__":
     ax.plot(map.traj[0,:], map.traj[1,:], map.traj[2,:], '-b', label='reference')
 
     # plot obstacle
-    for i in range(len(map.obs)):
-        Xc, Yc, Zc = plot_obstacles(map.obs[i,0], map.obs[i,1], 1.2*map.altitude, map.obs[i,2])
-        ax.plot_surface(Xc, Yc, Zc, alpha=0.5)
+    # for i in range(len(map.obs)):
+    #     Xc, Yc, Zc = plot_obstacles(map.obs[i,0], map.obs[i,1], 1.2*map.altitude, map.obs[i,2])
+    #     ax.plot_surface(Xc, Yc, Zc, alpha=0.5)
 
     leader.path = np.array(leader.path)
     follower1.path = np.array(follower1.path)
@@ -297,11 +302,11 @@ if __name__ == "__main__":
     follower3.path = np.array(follower3.path)
     follower4.path = np.array(follower4.path)
     # follower2.path = np.array(follower2.path)
-    ax.plot(leader.path[:,0], leader.path[:,1], leader.path[:,2], '--r', label='leader UAV')
-    ax.plot(follower1.path[:,0], follower1.path[:,1], follower1.path[:,2], '--g', label='follower 1 UAV')
-    ax.plot(follower2.path[:,0], follower2.path[:,1], follower2.path[:,2], '--g', label='follower 2 UAV')
-    ax.plot(follower3.path[:,0], follower3.path[:,1], follower3.path[:,2], '--g', label='follower 2 UAV')
-    ax.plot(follower4.path[:,0], follower4.path[:,1], follower4.path[:,2], '--g', label='follower 2 UAV')
+    ax.plot(leader.path[:,0], leader.path[:,1], leader.path[:,2], '--r', label='Leader')
+    ax.plot(follower1.path[1,0], follower1.path[1,1], follower1.path[1,2], '--g', label='Follower 1')
+    ax.plot(follower2.path[:,0], follower2.path[:,1], follower2.path[:,2], '--g', label='Follower 2')
+    ax.plot(follower3.path[:,0], follower3.path[:,1], follower3.path[:,2], '--g', label='Follower 3')
+    ax.plot(follower4.path[:,0], follower4.path[:,1], follower4.path[:,2], '--g', label='Follower 4')
     ax.plot(map.traj[0,0], map.traj[1,0], map.traj[2,0], 'ks', label='start')    # start
     ax.plot(map.traj[0,-1], map.traj[1,-1], map.traj[2,-1], 'ko', label='end')    # end
     

@@ -1,7 +1,7 @@
 
 from importlib.resources import path
 from pickle import TRUE
-# from cv2 import sqrt
+from cv2 import sqrt
 import numpy as np
 import matplotlib.pyplot as plt
 import time
@@ -29,12 +29,14 @@ class Plotting:
         self.ax.plot(path[:,0], path[:,1], label=label)
         plt.legend()
 
-    def plot_animation(self, path1, path2, path3,path4,path5,x_s,y_s,x_start,y_start,x_end,y_end, length ,width,obs, radius):
+    def plot_animation(self, path1, path2, path3,path4,path5,path6,path7,x_s,y_s,x_start,y_start,x_end,y_end, length ,width,obs, radius = 2.5):
         path1 = np.array(path1)
         path2 = np.array(path2)
         path3 = np.array(path3)
         path4 = np.array(path4)
         path5 = np.array(path5)
+        path6 = np.array(path6)
+        path7 = np.array(path7)
         # ref1 = np.array(ref1)
         # ref2 = np.array(ref2)
         
@@ -44,6 +46,8 @@ class Plotting:
         yaw3=[]
         yaw4=[]
         yaw5=[]
+        yaw6=[]
+        yaw7=[]
 
         for i in range(length_p):
             #Yaw of Robot
@@ -53,17 +57,23 @@ class Plotting:
                 yaw_3 = math.atan2(path3[i+1,1]-path3[i,1],path3[i+1,0]-path3[i,0])
                 yaw_4 = math.atan2(path4[i+1,1]-path4[i,1],path4[i+1,0]-path4[i,0])
                 yaw_5 = math.atan2(path5[i+1,1]-path5[i,1],path5[i+1,0]-path5[i,0])
+                yaw_6 = math.atan2(path6[i+1,1]-path6[i,1],path6[i+1,0]-path6[i,0])
+                yaw_7 = math.atan2(path7[i+1,1]-path7[i,1],path7[i+1,0]-path7[i,0])
             else:
                 yaw_1 = math.pi/2
                 yaw_2 = math.pi/2
                 yaw_3 = math.pi/2
                 yaw_4 = math.pi/2
                 yaw_5 = math.pi/2
+                yaw_6 = math.pi/2
+                yaw_7 = math.pi/2
             yaw1.append(yaw_1)
             yaw2.append(yaw_2)
             yaw3.append(yaw_3)
             yaw4.append(yaw_4)
             yaw5.append(yaw_5)
+            yaw6.append(yaw_6)
+            yaw7.append(yaw_7)
 
         start_time = time.time()
         for i in range(length_p):
@@ -95,6 +105,11 @@ class Plotting:
             plt.plot(path5[:i,0], path5[:i,1], "-b", label="Follower 4")
             self.draw_rectangle(path5[i,:2], length, width,yaw5[i], 'g')
             
+            plt.plot(path6[:i,0], path6[:i,1], "-b", label="Follower 5")
+            self.draw_rectangle(path6[i,:2], length, width,yaw6[i], 'g')
+
+            plt.plot(path7[:i,0], path7[:i,1], "-b", label="Follower 6")
+            self.draw_rectangle(path7[i,:2], length, width,yaw7[i], 'g')
             # #Plot Circle
             # plt.plot(path1[:i,0], path1[:i,1], "-g", label="Leader")
             # self.draw_circle(path1[i,:2], radius, 'g')
@@ -111,6 +126,8 @@ class Plotting:
                     self.draw_overlaid(path3[j,:2], length, width,yaw3[j], 'lightgray')
                     self.draw_overlaid(path4[j,:2], length, width,yaw4[j], 'lightgray')
                     self.draw_overlaid(path5[j,:2], length, width,yaw5[j], 'lightgray')
+                    self.draw_overlaid(path6[j,:2], length, width,yaw6[j], 'lightgray')
+                    self.draw_overlaid(path7[j,:2], length, width,yaw7[j], 'lightgray')
                 # self.draw_circle(path1[j,:2], radius, 'lightgray')
                 # self.draw_circle(path2[j,:2], radius, 'lightgray')
                 # self.draw_circle(path3[j,:2], radius, 'lightgray')

@@ -1,20 +1,18 @@
-
 from importlib.resources import path
 from pickle import TRUE
-from cv2 import sqrt
 import numpy as np
 import matplotlib.pyplot as plt
 import time
 import math
 from env import Env
 from sympy import false
+
 class Plotting:
     def __init__(self, name, xlim=[-100,100], ylim=[-100,100], is_grid=True):
         self.name = name
         self.xlim = xlim
         self.ylim = ylim
         self.is_grid = is_grid
-
         self.ax = plt.axes(projection ='3d')
         self.ax.set_title(name)
         self.ax.grid(is_grid)
@@ -32,16 +30,11 @@ class Plotting:
     def plot_animation(self, path1, path2, path3,x_s,y_s,x_start,y_start,x_end,y_end, length ,width,obs, radius = 2.5):
         path1 = np.array(path1)
         path2 = np.array(path2)
-        path3 = np.array(path3)
-
-        # ref1 = np.array(ref1)
-        # ref2 = np.array(ref2)
-        
+        path3 = np.array(path3)        
         length_p = len(path1)
         yaw1=[]
         yaw2=[]
         yaw3=[]
-
 
         for i in range(length_p):
             #Yaw of Robot
@@ -49,7 +42,6 @@ class Plotting:
                 yaw_1 = math.atan2(path1[i+1,1]-path1[i,1],path1[i+1,0]-path1[i,0])
                 yaw_2 = math.atan2(path2[i+1,1]-path2[i,1],path2[i+1,0]-path2[i,0])
                 yaw_3 = math.atan2(path3[i+1,1]-path3[i,1],path3[i+1,0]-path3[i,0])
-
             else:
                 yaw_1 = math.pi/2
                 yaw_2 = math.pi/2
@@ -77,10 +69,10 @@ class Plotting:
             plt.plot(path1[:i,0], path1[:i,1], "-g", label="Leader")
             self.draw_rectangle(path1[i,:2], length, width,yaw1[i], 'b')
 
-            plt.plot(path2[:i,0], path2[:i,1], "-b", label="UAV 1")
+            plt.plot(path2[:i,0], path2[:i,1], "-b", label="Follower 1")
             self.draw_rectangle(path2[i,:2], length, width,yaw2[i], 'g')
 
-            plt.plot(path3[:i,0], path3[:i,1], "-b", label="UAV 2")
+            plt.plot(path3[:i,0], path3[:i,1], "-b", label="Follower 2")
             self.draw_rectangle(path3[i,:2], length, width,yaw3[i], 'g')
 
             

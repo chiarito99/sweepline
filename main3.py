@@ -1,7 +1,6 @@
 from cmath import nan
 from ctypes import sizeof
 from operator import le, length_hint
-import re
 from tkinter import W
 import numpy as np
 import math
@@ -206,9 +205,7 @@ if __name__ == "__main__":
     y_start = -80
     x_end = 80
     y_end = 80
-    # M, Mshifted= getConvexPolygon(n_vertices,polygon_radius,rad_var,ang_var)
-    # K = M.tolist()
-    # print(K)
+    # K = [[58.98295314305732, -40.46389776524755], [-19.5748849118947, -78.531936254165], [-62.674712335622026, 24.06481669719506], [-31.09947113556031, 61.08658069805723], [52.20911077098446, 26.412130624396212]]
     K = [[58.98295314305732, -40.46389776524755], [-19.5748849118947, -78.531936254165], [-62.674712335622026, 24.06481669719506], [-31.09947113556031, 61.08658069805723], [52.20911077098446, 26.412130624396212]]
     # Map and reference path generation
     # Calculate L&W of one Camera
@@ -220,7 +217,8 @@ if __name__ == "__main__":
     xxx = overlap(width,length,percenoverlap)
     offsetx,offsety,resolution = calculateover(width,length,xxx)
     disLF = np.hypot(offsetx,offsety)
-    cons =disLF
+    # print(disLF)
+    cons = disLF
     map = Env(K,x_start,y_start,x_end,y_end,altitude,resolution)
     flag = 0
     err1 = 0
@@ -237,14 +235,9 @@ if __name__ == "__main__":
     follower1 = FollowerUAV(pos=[x_start,y_start,0],leader=leader, delta=[-offsetx,-offsety],wp = pt)
     follower2 = FollowerUAV(pos=[x_start,y_start,0],leader=leader, delta=[-offsetx, offsety],wp = pt)
     x_traj, y_traj = [], []
-    print(len(map.traj[0]))
     for i in range(len(map.traj[0])):
         ref = map.traj[:,i]
         a = ref-a
-        # x_traj.append(ref[0])
-        # # print(x_traj)
-        # y_traj.append(ref[1])
-        # # print()
         is_colision = False
         for i in range(len(map.obs)):
             do = math.sqrt((ref[0]-map.obs[i,0])**2 + (ref[1]-map.obs[i,1])**2)
@@ -259,14 +252,9 @@ if __name__ == "__main__":
         lvel = leader.control_signal(ref, map.obs,flag,err1,err2)
         f1vel = follower1.control_signal(ref, map.obs,rbt_pos)
         f2vel = follower2.control_signal(ref, map.obs,rbt_pos)
-        # if(i%80 > 60):
-        #     f1vel = f1vel / 2
-        # UAV update
         leader.update_position(lvel)
         a = leader.pos
         vleader = lvel
-        # print(leader.pos-a)
-        # print(follower1.pos - b)
         follower1.update_position(f1vel)
         follower2.update_position(f2vel)
         err1= np.hypot((leader.pos[0]-follower1.pos[0]),(leader.pos[1]-follower1.pos[1]))
@@ -278,8 +266,7 @@ if __name__ == "__main__":
         else:
             flag=0
 
-    # # print(leader.path)
-    # print(follower1.angle)
+
     plot= Plotting("formation")
     plot.plot_animation(leader.path,follower1.path,follower2.path,ox, oy,x_start,y_start,x_end,y_end,length,width,map.obs)
     plt.show()
@@ -288,9 +275,6 @@ if __name__ == "__main__":
     plt.figure()
     ax = plt.axes(projection ='3d')
     ax.plot(map.ox, map.oy, np.ones(len(map.ox))*map.altitude, '-xk', label='range')
-
-    # ax.plot(map.s,[np.rad2deg(iyaw) for iyaw in map.ryaw], "-r", label="yaw")
-    # ax.plot(map.s, map.rk, "-r", label="curvature")
     ax.plot(map.traj[0,:], map.traj[1,:], map.traj[2,:], '-b', label='reference')
 
     # plot obstacle
@@ -302,10 +286,10 @@ if __name__ == "__main__":
     follower1.path = np.array(follower1.path)
     follower2.path = np.array(follower2.path)
 
-    # follower2.path = np.array(follower2.path)
-    ax.plot(leader.path[:,0], leader.path[:,1], leader.path[:,2], '--r', label='leader UAV')
-    ax.plot(follower1.path[:,0], follower1.path[:,1], follower1.path[:,2], '--c', label='follower 1 UAV')
-    ax.plot(follower2.path[:,0], follower2.path[:,1], follower2.path[:,2], '--g', label='follower 2 UAV')
+    follower2.path = np.array(follower2.path)
+    ax.plot(leader.path[:,0], leader.path[:,1], leader.path[:,2], '--r', label='Leader ')
+    ax.plot(follower1.path[:,0], follower1.path[:,1], follower1.path[:,2], '--c', label='Follower 1 ')
+    ax.plot(follower2.path[:,0], follower2.path[:,1], follower2.path[:,2], '--g', label='Follower 2 ')
 
     ax.plot(map.traj[0,0], map.traj[1,0], map.traj[2,0], 'ks', label='start')    # start
     ax.plot(map.traj[0,-1], map.traj[1,-1], map.traj[2,-1], 'ko', label='end')    # end

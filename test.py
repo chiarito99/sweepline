@@ -119,27 +119,27 @@ if __name__ == "__main__":
     goal = np.array([10,10,5])
 
     leader = LeaderUAV()
-    follower = FollowerUAV(pos=[1,0,0], leader=leader, delta=[-1,-1])    
+    # follower = FollowerUAV(pos=[1,0,0], leader=leader, delta=[-1,-1])    
 
     dt = 0.01
     sim_time = 10
     iter = 0
     while sim_time-iter*dt > 0:
         lvel = leader.control_signal(goal, obs)
-        fvel = follower.control_signal(goal, obs)
+        # fvel = follower.control_signal(goal, obs)
         
         leader.update_position(lvel)
-        follower.update_position(fvel)
+        # follower.update_position(fvel)
         iter += 1
 
     path = np.array(leader.path)
-    fpath = np.array(follower.path)
+    # fpath = np.array(follower.path)
     plt.figure()
     ax = plt.axes()
     sp = np.arange(0,2*math.pi+math.pi/6,math.pi/6)
     for i in range(len(obs)):
         ax.plot(obs[i,0]+obs[i,2]*np.cos(sp), obs[i,1]+obs[i,2]*np.sin(sp), '-k')
     ax.plot(path[:,0], path[:,1], '-b', label='leader')
-    ax.plot(fpath[:,0], fpath[:,1], '-r', label='follower')
+    # ax.plot(fpath[:,0], fpath[:,1], '-r', label='follower')
     ax.axis('equal')
     plt.show()

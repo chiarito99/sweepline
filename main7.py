@@ -7,9 +7,9 @@ import math
 import matplotlib.pyplot as plt
 from mpl_toolkits import mplot3d
 from Plotting3 import Plotting
-from env import Env
+from env1 import Env1
 from sklearn.metrics import jaccard_score
-from sweep_line_has_bad import getConvexPolygon,computeWLofCamera
+from sweep_line_has_bad import getConvexPolygon,computeWLofCamera,getOpSweep
 
 global flag,err1,err2,cons,a,f1,f2,vleader
 class LeaderUAV:
@@ -28,7 +28,7 @@ class LeaderUAV:
 
 
     def move_to_goal(self, goal):
-        dm = math.sqrt((goal[0]-self.pos[0])**2 + (goal[1]-self.pos[1])**2 + (goal[2]-self.pos[2])**2)
+        dm = math.sqrt((goal[0]-self.pos[0])**2 + (goal[1]-self.pos[1])**2)
         vm2g = (goal-self.pos)/dm    # Velocity move to goal
         fm2g = self.am               # Control parameter of vm2g
         if dm <= self.bm:
@@ -49,14 +49,9 @@ class LeaderUAV:
             v = v + (fao*rot)@vao
         return v
 
-    def control_signal(self, ref, obs,flag,err1,err2):
+    def control_signal(self, ref):
         v1 = self.move_to_goal(ref)
-        if flag == 1:
-            v1= 1/(self.do*max(err1-cons,err2-cons)) * v1
-            if max(err1-cons,err2-cons) < self.do:
-                v1 =  self.bm*max(err1-cons,err2-cons)/self.am * v1
-        v2 = self.avoid_obstacle(obs)
-        return v1 + v2
+        return v1 
     
     def update_position(self, vel, dt=0.1):
         self.pos = self.pos + vel*dt
@@ -138,16 +133,15 @@ class FollowerUAV:
                 fao = self.ao*(1-do/self.bo)
             v = v + (fao*rot)@vao
         return v
-
     def control_signal(self, ref, obs,rbt_pos):
         v1 = self.keep_formation(ref,flag,a,f1)
-        v2 = 1.2*self.avoid_obstacle(obs)
-        v3 = self.avoid_Robot(rbt_pos)
-        if v2[1] == 0 and flag == 0 :
-            v1 = 1.3*v1
-        else:
-            v1 = v1
-        return v1+v2+v3
+        # v2 = 1.2*self.avoid_obstacle(obs)
+        # v3 = self.avoid_Robot(rbt_pos)
+        # if v2[1] == 0 and flag == 0 :
+        #     v1 = 1.3*v1
+        # else:
+        #     v1 = v1
+        return v1
     
     def update_position(self, vel, dt=0.1):
         self.heading =(np.arctan2(vel[1], vel[0]) + np.pi) %(2*np.pi)-np.pi
@@ -200,6 +194,50 @@ def calculate_polygon_area(vertices):
         x2, y2 = vertices[(i+1) % n]  # Lấy đỉnh kế tiếp (hoặc đỉnh đầu tiên nếu i là đỉnh cuối cùng)
         area += x1*y2 - x2*y1
     return abs(area) / 2.0
+
+# def khacphia(pt,K):
+#     pt = np.array(pt)
+#     K = np.array(K)
+#     # ox, oy = zip(*K)
+#     for i in range(2,len(pt),4):
+#         pterr = pt[i+1]-pt[i]
+#         m,n = findMC(pt,pterr,i)
+#         dem = 0
+#         for j in range(len(K)-1):
+#             c = (K[j][0]*m-K[j][1]+n)*(K[j+1][0]*m-K[j+1][1]+n) 
+#             pterr1 = K[j+1]-K[j]
+#             a,b = findMC1(K,pterr1,j)
+#             if c < 0 and j < len(K) -2:
+#                 dem = dem +1
+#                 pt[i+2-dem] = giao(a,b,m,n)
+#                 temp = giao(a,b,m,n)
+#             elif c < 0 and j >= len(K) -2:
+#                 dem = dem +1
+#                 pt[i-2+dem] = temp
+#                 pt[i-1+dem] = giao(a,b,m,n)  
+#     return pt
+
+# def khacphia1(pt,K):
+#     pt = np.array(pt)
+#     K = np.array(K)
+#     # ox, oy = zip(*K)
+#     for i in range(0,len(pt),4):
+#         pterr = pt[i+1]-pt[i]
+#         m,n = findMC(pt,pterr,i)
+#         dem = 0
+#         for j in range(len(K)-1):
+#             c = (K[j][0]*m-K[j][1]+n)*(K[j+1][0]*m-K[j+1][1]+n) 
+#             pterr1 = K[j+1]-K[j]
+#             a,b = findMC1(K,pterr1,j)
+#             if c < 0 and j < len(K) -2 :
+#                 dem = dem +1
+#                 pt[i-1+dem] = giao(a,b,m,n)
+#                 temp = giao(a,b,m,n)
+#             elif c< 0 and j >= len(K) -2 :
+#                 dem = dem +1
+#                 pt[i-1+dem] = temp
+#                 pt[i-2+dem] = giao(a,b,m,n)
+#     return pt
 
 def getAngle(knee, hip, shoulder):
     ang = math.degrees(math.atan2(shoulder[1]-hip[1], shoulder[0]-hip[0]) - math.atan2(knee[1]-hip[1], knee[0]-hip[0]))
@@ -306,49 +344,23 @@ if __name__ == "__main__":
     K2.append(K[point_angle[0]+1])
     K2.append(K[point_angle[0]])
     arange(K,point_angle)
+    path = getOpSweep(K1,[x_start,y_start],[K1[-1][0],K1[-1][1]],5)
     K1.append(K1[0])
     K2.append(K2[0])
     ox1 ,oy1 = zip(*K1)
     ox2 ,oy2 = zip(*K2)
-    map = Env(K1,x_start,y_start,K1[-1][0],K1[-1][1],altitude,5)
-    pt = map.point
-
+    print(path)
+    map = Env1([x_start,y_start],[K1[-1][0],K1[-1][1]],5,path)
 
     # Formation processing
-    leader = LeaderUAV(pos=[x_start,y_start,0])
-    follower1 = FollowerUAV(pos=[x_start,y_start,0],leader=leader, delta=[-offsetx,-offsety],wp = pt)
-    follower2 = FollowerUAV(pos=[x_start,y_start,0],leader=leader, delta=[-offsetx, offsety],wp = pt)
+    leader = LeaderUAV(pos=[x_start,y_start])
+    # follower1 = FollowerUAV(pos=[x_start,y_start,0],leader=leader, delta=[-offsetx,-offsety],wp = pt)
+    # follower2 = FollowerUAV(pos=[x_start,y_start,0],leader=leader, delta=[-offsetx, offsety],wp = pt)
     x_traj, y_traj = [], []
-    for i in range(len(map.traj[0])):
-        ref = map.traj[:,i]
-        a = ref-a
-        is_colision = False
-        for i in range(len(map.obs)):
-            do = math.sqrt((ref[0]-map.obs[i,0])**2 + (ref[1]-map.obs[i,1])**2)
-            bias = 2.0
-            if do <= map.obs[i,2] + bias:
-                is_colision = True
-                break
-        if is_colision:
-            continue
-        rbt_pos = np.array([follower1.pos,follower2.pos])
-        # UAV processing
-        lvel = leader.control_signal(ref, map.obs,flag,err1,err2)
-        f1vel = follower1.control_signal(ref, map.obs,rbt_pos)
-        f2vel = follower2.control_signal(ref, map.obs,rbt_pos)
-        leader.update_position(lvel)
-        a = leader.pos
-        vleader = lvel
-        follower1.update_position(f1vel)
-        follower2.update_position(f2vel)
-        err1= np.hypot((leader.pos[0]-follower1.pos[0]),(leader.pos[1]-follower1.pos[1]))
-        err2 = np.hypot((leader.pos[0]-follower2.pos[0]),(leader.pos[1]-follower2.pos[1]))
-        if err1+err2- 2*disLF > 0.7 and err1+err2- 2*disLF < 1.5 :
-            flag = 1
-        elif abs(leader.heading - follower1.heading) >np.pi/2 or abs(leader.heading - follower2.heading) >np.pi/2 :
-            flag = 2
-        else:
-            flag=0
+    for i in range(1,len(map.traj[0])):
+        ref1 = map.traj[:,i]
+        lvel1 = leader.control_signal(ref1)
+        leader.update_position(lvel1)
 
 
     # plot= Plotting("formation")
@@ -361,7 +373,7 @@ if __name__ == "__main__":
     # ax = plt.axes(projection ='3d')
     ax.plot(ox1, oy1, '-xk', label='range')
     ax.plot(ox2, oy2, '-xk', label='range')
-    # ax.fill(ox1,oy1,facecolor='red')
+    ax.fill(ox1,oy1,facecolor='red')
     # ax.fill(ox2,oy2,facecolor='green')
     ax.plot(map.traj[0,:], map.traj[1,:], '-b', label='reference')
 
