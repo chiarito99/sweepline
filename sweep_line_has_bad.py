@@ -130,18 +130,23 @@ def findAntipodalPoints(V):
 def getSweep(starting_point, base, V):
     sweepIntersection = []
     for i in range(len(V)):
+        print(i)
         if(i==len(V)-1):
             line = [V[i],V[0]]
             if not (base==line):
                 intersection = findIntersection(starting_point,base,line)
                 if (intersection) and (checkBetween(line[0],line[1],intersection)):
                     sweepIntersection.append(intersection)
+            print("getSweep")
+            # print(i)
         else:
             line = [V[i],V[i+1]]
             if not (base==line):
                 intersection = findIntersection(starting_point,base,line)
                 if (intersection) and (checkBetween(line[0],line[1],intersection)):
                     sweepIntersection.append(intersection)
+    print(sweepIntersection[0])
+    print(distance(starting_point,sweepIntersection[0]))           
     if(distance(starting_point,sweepIntersection[0]) > distance(starting_point,sweepIntersection[1])):
         return sweepIntersection[0]
     else:
@@ -222,13 +227,15 @@ def getUp(start_point,polygon_end, dist , base):
 
 def getPath(base, polygon_end,offset, V, direction):
     # direction = 0 -> clockwise
+    print(1)
+    print(len(V))
     path = []
     point1 = getUp(base[0], polygon_end ,offset/2,base)
     point2 = getUp(base[1], polygon_end, offset/2,base)
     
     basePointOffset1 = getSweep(point2,base,V)
     basePointOffset2 = getSweep(point1,base,V)
-
+    print(direction)
 
     if(direction == 0):
         path.append(basePointOffset1)
@@ -237,7 +244,9 @@ def getPath(base, polygon_end,offset, V, direction):
         path.append(basePointOffset2)
         path.append(basePointOffset1)
     i = 0
-    while((distPoint2line(polygon_end,[path[-1],path[-2]]) > offset and i == 0) or (distPoint2line(polygon_end,[path[-2],path[-3]]) > offset and i == 1)):
+    # print(distPoint2line(polygon_end,[path[-2],path[-3]]) > offset and i == 1)
+    # while((distPoint2line(polygon_end,[path[-1],path[-2]]) > offset and i == 0) or (distPoint2line(polygon_end,[path[-2],path[-3]]) > offset and i == 1) or len(V) == 3):
+    while True:
         if(i == 0):
             next = getUp(path[-1], polygon_end, offset, base)
             path.append(next)
@@ -247,6 +256,8 @@ def getPath(base, polygon_end,offset, V, direction):
         i = i + 1
         if(i > 1):
             i = 0
+        print(path)
+        print(i)
     return path
 
 def bestPath(antipodal_pair, offset, V):
@@ -258,18 +269,24 @@ def bestPath(antipodal_pair, offset, V):
         b = antipodal_pair[0]
         a = antipodal_pair[1]
 
+    # print(a,b)
     phi = getClockwiseAngle(nextVector(b,V,0),nextVector(a,V,0)) - np.pi
     gammab = getClockwiseAngle(nextVector(b-1,V,0),nextVector(b,V,0))
     gammaa = getClockwiseAngle(nextVector(a-1,V,0),nextVector(a,V,0)) - phi
 
+    print(phi,gammab,gammaa)
     if(gammab < gammaa):
         b2 = b-1
         a2 = a
     else:
         b2  = a-1
         a2 = b
+
+    print(a,b)
+    print(a2,b2)
     if(b+1 <= len(V)-1):
-        if(distPoint2line(V[a],[V[b],V[b+1]]) < distPoint2line(V[a2],[V[b2],V[b2+1]])):
+        print(distPoint2line(V[a],[V[b],V[b+1]]),distPoint2line(V[a2],[V[b2],V[b2+1]]))
+        if(distPoint2line(V[a],[V[b],V[b+1]]) <= distPoint2line(V[a2],[V[b2],V[b2+1]])):
             base = [V[b],V[b+1]]
             polygon_end = V[a]
             direction = 0
@@ -278,7 +295,7 @@ def bestPath(antipodal_pair, offset, V):
             base = [V[b2],V[b2+1]]
             polygon_end = V[a2]
             direction = 1
-            path = getPath(base, polygon_end, offset, V,direction)     
+            path = getPath(base, polygon_end, offset, V,direction)
     else:
         if(distPoint2line(V[a],[V[b],V[0]]) < distPoint2line(V[a2],[V[b2],V[b2+1]])):
             base = [V[b],V[0]]
@@ -303,10 +320,9 @@ def flightLine(path):
     return len(path) - 1
 
 def getOpSweep(V, starting_point, stopping_point, offset):
-
     A = findAntipodalPoints(V)
+    print(len(A))
     c = np.inf
-
     for i in range(len(A)):
         p = bestPath(A[i], offset, V)
         p1 = p[::1]
@@ -403,7 +419,7 @@ def increment(i,n):
     i_next = i%n + 1
     if i == n:
         i_next = 0
-    return i_next;
+    return i_next
 
 def clockWiseDist(a,b):
     if a<0:
@@ -449,7 +465,7 @@ def isAConvexPolygon(M):
         angle_i = np.pi - angleAP(M, i,j)
         if (angle_i > np.pi) or (angle_i < 0):
             isConvex = False
-    return isConvex;
+    return isConvex
 
 
 def getPolygon(numVert, radius, radVar, angVar):
@@ -466,7 +482,7 @@ def getPolygon(numVert, radius, radVar, angVar):
     Polygon_vertex = np.flipud(Polygon_vertex)
     shifted_polygon_vertex = np.roll(Polygon_vertex, -1,0)
 
-    return Polygon_vertex, shifted_polygon_vertex;
+    return Polygon_vertex, shifted_polygon_vertex
 
 def getConvexPolygon(numVert, radius, radVar, angVar):
     isConvex = False
@@ -480,32 +496,3 @@ def computeWLofCamera(height, alpha, beta):
     w = 2*height*np.tan(alpha/2)
     l = 2*height*np.tan(beta/2)
     return w, l
-
-# # coord = [[1,1], [2,1], [1.8,1.8], [0.8,2], [0.5,1.5]]
-# coord = [[1,1], [3,1], [2,3], [0.8,2], [0.5,1.5]]
-# # coord = [[1,2], [3,2], [3,1], [1,1]]
-# V = coord[::-1]
-# # coord = [[146.76306045999095, -2.0473334316286795], [-60.526906172934744, -109.76533421120082], [-132.6429327946019, 20.193654150405926], [-14.865406821485804, 101.09338703482929], [78.12772846254278, 117.07811942387043]]
-# # coord = [[93.66465192394718, -110.36956689901635], [-66.07872666446623, -178.26289333143518], [-120.0938559030976, -68.63167151822334], [-91.59810431321333, 106.98604310933723], [163.91984334377128, 8.73263368860047]]
-# coord = [[98.50962429288698, -144.1519054946347], [24.203143228386516, -163.44423722112364], [-125.85339761977067, 37.88119097590002], [-114.68711430151565, 153.07972833204173], [94.98896813047023, 104.89551120000584]]
-# V = coord
-#  #repeat the first point to create a 'closed loop'
-
-# # coord = [[93.0, -88.0], [-85.0, -135.0], [-154.0, 45.0], [-84.0, 101.0], [126.0, 170.0]]
-
-# print(findAntipodalPoints(V))
-
-# path = getBadSweep(V, [2,0], [0,2], 0.09)
-
-
-# coord.append(coord[0])
-# xPath,yPath = zip(*path)
-# # print(path)
-# xs, ys = zip(*coord) #create lists of x and y values
-
-# plt.figure()
-# plt.plot(xs,ys) 
-# plt.plot(xPath,yPath)
-# plt.axis('scaled')
-
-# plt.show() # if you need...
