@@ -221,27 +221,25 @@ def khacphia(pt,K):
                 pt[i-1+dem] = giao(a,b,m4,n4)  
     return pt
 
-# def khacphia1(pt,K):
-#     pt = np.array(pt)
-#     K = np.array(K)
-#     # ox, oy = zip(*K)
-#     for i in range(0,len(pt),4):
-#         pterr = pt[i+1]-pt[i]
-#         m,n = findMC(pt,pterr,i)
-#         dem = 0
-#         for j in range(len(K)-1):
-#             c = (K[j][0]*m-K[j][1]+n)*(K[j+1][0]*m-K[j+1][1]+n) 
-#             pterr1 = K[j+1]-K[j]
-#             a,b = findMC1(K,pterr1,j)
-#             if c < 0 and j < len(K) -2 :
-#                 dem = dem +1
-#                 pt[i-1+dem] = giao(a,b,m,n)
-#                 temp = giao(a,b,m,n)
-#             elif c< 0 and j >= len(K) -2 :
-#                 dem = dem +1
-#                 pt[i-1+dem] = temp
-#                 pt[i-2+dem] = giao(a,b,m,n)
-#     return pt
+def khacphia1(pt,K):
+    pt = np.array(pt)
+    K = np.array(K)
+    # ox, oy = zip(*K)
+    for i in range(0,len(pt),4):
+        m5,n5 = duongthang(pt[i],pt[i+1])
+        dem = 0
+        for j in range(len(K)-1):
+            c = (K[j][0]*m5-K[j][1]+n5)*(K[j+1][0]*m5-K[j+1][1]+n5) 
+            a,b = duongthang(K[j],K[j+1])
+            if c < 0 and j < len(K) -2 :
+                dem = dem +1
+                pt[i-1+dem] = giao(a,b,m5,n5)
+                temp = giao(a,b,m5,n5)
+            elif c< 0 and j >= len(K) -2 :
+                dem = dem +1
+                pt[i-1+dem] = temp
+                pt[i-2+dem] = giao(a,b,m5,n5)
+    return pt
 
 def getAngle(knee, hip, shoulder):
     ang = math.degrees(math.atan2(shoulder[1]-hip[1], shoulder[0]-hip[0]) - math.atan2(knee[1]-hip[1], knee[0]-hip[0]))
@@ -331,9 +329,11 @@ if __name__ == "__main__":
     a = [0]
     f1 = [0]
     f2 = [0]
+
     K.append(K[0])
     point_angle = checkangle(K,point_angle)
     checkslide(K,point_angle)
+
     # print(K)
     ox, oy = zip(*K)
     K1 = []
@@ -343,25 +343,40 @@ if __name__ == "__main__":
     K2.append(K[point_angle[0]+1])
     K2.append(K[point_angle[0]])
     arange(K,point_angle)
-    path = getOpSweep(K1,[x_start,y_start],[K1[-1][0],K1[-1][1]],5)
-    path.remove(path[0])
+    print(K1)
+    print(K2)
+
+    path1 = getOpSweep(K1,[x_start,y_start],[K1[-1][0],K1[-1][1]],12)
+    print(path1)
+    # path2 = getOpSweep(K2,[x_start,y_start],[K2[-1][0],K2[-1][1]],2)
+    # print(path1)
+
+    path1.pop(0)
+    path1.pop(len(path1)-1)
+    # path2.pop(0)
+    # path2.pop(len(path2)-1)
+
     K1.append(K1[0])
-    path = khacphia(path,K1)
+    path1 = khacphia(path1,K1)
+    path1 = khacphia1(path1,K1)
     K2.append(K2[0])
+    # path2 = khacphia(path2,K2)
+    # path2 = khacphia1(path2,K2)
+
     ox1 ,oy1 = zip(*K1)
     ox2 ,oy2 = zip(*K2)
-    map = Env1([x_start,y_start],[K1[-1][0],K1[-1][1]],5,path)
+    map1 = Env1([x_start,y_start],[K1[-1][0],K1[-1][1]],5,path1)
+    # map2 = Env1([x_start,y_start],[K2[-1][0],K2[-1][1]],5,path2)
 
     # Formation processing
     leader = LeaderUAV(pos=[x_start,y_start])
     # follower1 = FollowerUAV(pos=[x_start,y_start,0],leader=leader, delta=[-offsetx,-offsety],wp = pt)
     # follower2 = FollowerUAV(pos=[x_start,y_start,0],leader=leader, delta=[-offsetx, offsety],wp = pt)
     x_traj, y_traj = [], []
-    for i in range(1,len(map.traj[0])):
-        ref1 = map.traj[:,i]
+    for i in range(1,len(map1.traj[0])):
+        ref1 = map1.traj[:,i]
         lvel1 = leader.control_signal(ref1)
         leader.update_position(lvel1)
-
 
     # plot= Plotting("formation")
     # plot.plot_animation(leader.path,follower1.path,follower2.path,ox, oy,x_start,y_start,x_end,y_end,length,width,map.obs)
@@ -375,7 +390,7 @@ if __name__ == "__main__":
     ax.plot(ox2, oy2, '-xk', label='range')
     ax.fill(ox1,oy1,facecolor='red')
     # ax.fill(ox2,oy2,facecolor='green')
-    ax.plot(map.traj[0,:], map.traj[1,:], '-b', label='reference')
+    ax.plot(map1.traj[0,:], map1.traj[1,:], '-b', label='reference')
 
     # plot obstacle
     # for i in range(len(map.obs)):
@@ -394,7 +409,7 @@ if __name__ == "__main__":
     
 
     ax.set_title("Forest rangers")
-    ax.grid(True)
+    # ax.grid(True)
     ax.set_xlabel('x [m]')
     ax.set_ylabel('y [m]')
     # ax.set_zlabel('z [m]')
