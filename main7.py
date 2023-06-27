@@ -206,6 +206,7 @@ def khacphia(pt,K):
     # ox, oy = zip(*K)
     for i in range(2,len(pt),4):
         m4,n4= duongthang(pt[i],pt[i+1])
+        print(m4,n4)
         dem = 0
         for j in range(len(K)-1):
             c = (K[j][0]*m4-K[j][1]+n4)*(K[j+1][0]*m4-K[j+1][1]+n4) 
@@ -343,6 +344,7 @@ if __name__ == "__main__":
     K2.append(K[point_angle[0]])
     arange(K,point_angle)
     path = getOpSweep(K1,[x_start,y_start],[K1[-1][0],K1[-1][1]],5)
+    path.remove(path[0])
     K1.append(K1[0])
     path = khacphia(path,K1)
     K2.append(K2[0])
