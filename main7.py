@@ -195,27 +195,30 @@ def calculate_polygon_area(vertices):
         area += x1*y2 - x2*y1
     return abs(area) / 2.0
 
-# def khacphia(pt,K):
-#     pt = np.array(pt)
-#     K = np.array(K)
-#     # ox, oy = zip(*K)
-#     for i in range(2,len(pt),4):
-#         pterr = pt[i+1]-pt[i]
-#         m,n = findMC(pt,pterr,i)
-#         dem = 0
-#         for j in range(len(K)-1):
-#             c = (K[j][0]*m-K[j][1]+n)*(K[j+1][0]*m-K[j+1][1]+n) 
-#             pterr1 = K[j+1]-K[j]
-#             a,b = findMC1(K,pterr1,j)
-#             if c < 0 and j < len(K) -2:
-#                 dem = dem +1
-#                 pt[i+2-dem] = giao(a,b,m,n)
-#                 temp = giao(a,b,m,n)
-#             elif c < 0 and j >= len(K) -2:
-#                 dem = dem +1
-#                 pt[i-2+dem] = temp
-#                 pt[i-1+dem] = giao(a,b,m,n)  
-#     return pt
+def duongthang(A,B):
+    m = -(A[1]-B[1])/(B[0]-A[0])
+    n = (A[1]-B[1])/(B[0]-A[0])*A[0]+A[1]
+    return m,n
+
+def khacphia(pt,K):
+    pt = np.array(pt)
+    K = np.array(K)
+    # ox, oy = zip(*K)
+    for i in range(2,len(pt),4):
+        m4,n4= duongthang(pt[i],pt[i+1])
+        dem = 0
+        for j in range(len(K)-1):
+            c = (K[j][0]*m4-K[j][1]+n4)*(K[j+1][0]*m4-K[j+1][1]+n4) 
+            a,b = duongthang(K[j],K[j+1])
+            if c < 0 and j < len(K) -2:
+                dem = dem +1
+                pt[i+2-dem] = giao(a,b,m4,n4)
+                temp = giao(a,b,m4,n4)
+            elif c < 0 and j >= len(K) -2:
+                dem = dem +1
+                pt[i-2+dem] = temp
+                pt[i-1+dem] = giao(a,b,m4,n4)  
+    return pt
 
 # def khacphia1(pt,K):
 #     pt = np.array(pt)
@@ -252,11 +255,6 @@ def checkangle(K,point_angle):
             if getAngle(K[i],K[i+1],K[i+2]) > 180:
                 point_angle.append(i+1)
     return point_angle
-
-def duongthang(A,B):
-    m = -(A[1]-B[1])/(B[0]-A[0])
-    n = (A[1]-B[1])/(B[0]-A[0])*A[0]+A[1]
-    return m,n
 
 def giao(a,b,c,d): #giao của 2 đường thẳng
     x = (d-b)/(a-c)
@@ -346,10 +344,10 @@ if __name__ == "__main__":
     arange(K,point_angle)
     path = getOpSweep(K1,[x_start,y_start],[K1[-1][0],K1[-1][1]],5)
     K1.append(K1[0])
+    path = khacphia(path,K1)
     K2.append(K2[0])
     ox1 ,oy1 = zip(*K1)
     ox2 ,oy2 = zip(*K2)
-    print(path)
     map = Env1([x_start,y_start],[K1[-1][0],K1[-1][1]],5,path)
 
     # Formation processing
