@@ -2,8 +2,8 @@ from importlib.util import set_loader
 from cubic_spline import Spline2D
 from grid_based_sweep import *
 import numpy as np
-from sweep_line_has_bad import getOpSweep
-from sweep_line_has_bad import getBadSweep
+from sweep_line_has_bad_copy import getOpSweep
+from sweep_line_has_bad_copy import getBadSweep
 from shapely.geometry import LineString
 from shapely.ops import unary_union
 

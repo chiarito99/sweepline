@@ -8,7 +8,7 @@ from mpl_toolkits import mplot3d
 from Plotting5 import Plotting
 from env import Env
 from sklearn.metrics import jaccard_score
-from sweep_line_has_bad import getConvexPolygon,computeWLofCamera
+from sweep_line_has_bad_copy import getConvexPolygon,computeWLofCamera
 import random
 global flag,err1,err2,cons,a,f1,f2,vleader
 class LeaderUAV:
@@ -120,7 +120,6 @@ class FollowerUAV:
                 vkf = vleader/100
             else:
                 vkf= vkf
-
         fkf = self.am              # Control parameter of vm2g
         if dk <= self.bm:
             fkf = self.am*dk/self.bm
@@ -202,8 +201,8 @@ if __name__ == "__main__":
     y_start = -80
     x_end = 80
     y_end = 80
-    # K = [[58.98295314305732, -40.46389776524755], [-19.5748849118947, -78.531936254165], [-62.674712335622026, 24.06481669719506], [-31.09947113556031, 61.08658069805723], [52.20911077098446, 26.412130624396212]]
-    K = [[-10, -40], [-36.28155339805825, -40.0], [-20, -79]]
+    K = [[58.98295314305732, -40.46389776524755], [-19.5748849118947, -78.531936254165], [-62.674712335622026, 24.06481669719506], [-31.09947113556031, 61.08658069805723], [52.20911077098446, 26.412130624396212]]
+    # K = [[-10, -40], [-36.28155339805825, -40.0], [-20, -79]]
     #K = [[58.98295314305732, -40.46389776524755], [-19.5748849118947, -78.531936254165], [-62.674712335622026, 24.06481669719506], [-31.09947113556031, 61.08658069805723], [52.20911077098446, 26.412130624396212]]
     # Calculate L&W of one Camera
     alpha = 0.15 # Góc máy  chiều rộng
@@ -221,6 +220,8 @@ if __name__ == "__main__":
     K.append(K[0])
     ox, oy = zip(*K)
     pt = map.point
+    print(pt)
+
     flag = 0
     err1 = 0
     err2 = 0
@@ -230,7 +231,7 @@ if __name__ == "__main__":
     f1 = [0]
     f2 = [0]
     # Formation processing
-    print(random.randint(-10,10))
+    # print(random.randint(-10,10))
     leader = LeaderUAV(pos=[x_start,y_start,0])
     follower1 = FollowerUAV(pos=[x_start,y_start,0],leader=leader, delta=[-offsetx,-offsety],wp = pt)
     follower2 = FollowerUAV(pos=[x_start,y_start,0],leader=leader, delta=[-offsetx, offsety],wp = pt)
@@ -263,23 +264,20 @@ if __name__ == "__main__":
         f4vel = follower4.control_signal(ref, map.obs,rbt_pos)
         # UAV update
         leader.update_position(lvel)
-        a=leader.pos
+        leader.update_position(lvel)
+        a = leader.pos
         vleader = lvel
         follower1.update_position(f1vel)
         follower2.update_position(f2vel)
-        follower3.update_position(f3vel)
-        follower4.update_position(f4vel)
-
-        err1 = np.hypot((leader.pos[0]-follower1.pos[0]),(leader.pos[1]-follower1.pos[1]))
+        err1= np.hypot((leader.pos[0]-follower1.pos[0]),(leader.pos[1]-follower1.pos[1]))
         err2 = np.hypot((leader.pos[0]-follower2.pos[0]),(leader.pos[1]-follower2.pos[1]))
-        err3 = np.hypot((leader.pos[0]-follower3.pos[0]),(leader.pos[1]-follower3.pos[1]))
-        err4 = np.hypot((leader.pos[0]-follower4.pos[0]),(leader.pos[1]-follower4.pos[1]))
-        if 1.5 < err1+err2+err3+err4- 6*disLF < 4:
+        if err1+err2- 2*disLF > 0.7 and err1+err2- 2*disLF < 1.5 :
             flag = 1
         elif abs(leader.heading - follower1.heading) >np.pi/2 or abs(leader.heading - follower2.heading) >np.pi/2 :
-            flag =2
+            flag = 2
         else:
-            flag = 0
+            flag=0
+
     # # print(leader.path)
     # print(map.obs)
     plot= Plotting("formation")

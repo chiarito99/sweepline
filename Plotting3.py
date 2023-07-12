@@ -27,7 +27,7 @@ class Plotting:
         self.ax.plot(path[:,0], path[:,1], label=label)
         plt.legend()
 
-    def plot_animation(self, path1, path2, path3,x_s,y_s,x_start,y_start,x_end,y_end, length ,width,obs, radius = 2.5):
+    def plot_animation(self, path1, path2, path3,x_s,y_s,x_start,y_start,x_end,y_end, length ,width, radius = 2.5):
         path1 = np.array(path1)
         path2 = np.array(path2)
         path3 = np.array(path3)        
@@ -58,8 +58,8 @@ class Plotting:
             plt.fill(x_s,y_s,facecolor='lightblue')
             plt.plot(x_start,y_start,marker= ">", color = "green")
             plt.plot(x_end,y_end,marker="*",color = "blue")
-            for k in range(len(obs)):
-                self.draw_circle(obs[k,:2],obs[k,2], 'r')
+            # for k in range(len(obs)):
+            #     self.draw_circle(obs[k,:2],obs[k,2], 'r')
             # Reference
             # plt.plot(ref1[:i,0], ref1[:i,1], "-b")
             # plt.plot(ref2[:i,0], ref2[:i,1], "-b")

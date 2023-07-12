@@ -303,8 +303,8 @@ def main():  # pragma: no cover
     # resolution = 1.3
     # planning_animation(ox, oy, resolution)
 
-    ox = [0.0, 50.0, 50.0, 0.0, 0.0]
-    oy = [0.0, 0.0, 60.0, 60.0, 0.0]
+    ox = [0.0, 50.0, 50.0, 0.0]
+    oy = [0.0, 0.0, 60.0, 0.0]
     resolution = 5.0
     planning_animation(ox, oy, resolution)
 

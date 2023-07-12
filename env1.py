@@ -2,7 +2,7 @@ from importlib.util import set_loader
 from cubic_spline import Spline2D
 from grid_based_sweep import *
 import numpy as np
-from sweep_line_has_bad import getOpSweep
+from sweep_line_has_bad_copy import getOpSweep
 from shapely.geometry import LineString
 from shapely.ops import unary_union
 
@@ -32,7 +32,7 @@ class Env1:
                 px.append(xk)
                 py.append(yk)
 
-        ds = 0.4  # [m] distance of each intepolated points
+        ds = 0.3  # [m] distance of each intepolated points
         sp = Spline2D(px, py)
         s = np.arange(0, sp.s[-1], ds)
         self.s=s
@@ -59,39 +59,40 @@ class Env1:
         #                      [-100,100,0],
         #                      [90,90,0]])
 
-if __name__ == "__main__":
-    # ox = [0.0, 50.0, 50.0, 0.0, 0.0]
-    # oy = [0.0, 0.0, 60.0, 60.0, 0.0]
-    resolution = 5
-    x_start = -20
-    y_start = -50
-    x_end = 10
-    y_end = 10
-    xystart =[x_start,y_start]
-    xyend = [x_end,y_end]
+# if __name__ == "__main__":
+#     # ox = [0.0, 50.0, 50.0, 0.0, 0.0]
+#     # oy = [0.0, 0.0, 60.0, 60.0, 0.0]
+#     resolution = 5
+#     x_start = -20
+#     y_start = -50
+#     x_end = 10
+#     y_end = 10
+#     xystart =[x_start,y_start]
+#     xyend = [x_end,y_end]
 
-    # M, Mshifted= getConvexPolygon(n_vertices,polygon_radius,rad_var,ang_var)
-    # K = M.tolist()
-    # print(K)
+#     # M, Mshifted= getConvexPolygon(n_vertices,polygon_radius,rad_var,ang_var)
+#     # K = M.tolist()
+#     # print(K)
     
-    # K = [[58.98295314305732, -40.46389776524755], [-19.5748849118947, -78.531936254165], [-62.674712335622026, 24.06481669719506], [-31.09947113556031, 61.08658069805723],[30,55.4],[52.20911077098446, 26.412130624396212]]
-    K = [[-10, -40], [-36.28155339805825, -40.0], [-20, -79]]
-    # oy = [223.0, 28.0,19.0,4.0,0.0, 0.0,  119.0, 223.0]
-    # ox = [0.0, 50.0, 50.0, 0.0, 0.0]
-    # oy = [0.0, 0.0, 60.0, 60.0, 0.0]
-    altitude = 11
-    overlap = 0.3
-    path = getOpSweep(K, [x_start,y_start], [x_end,y_end],resolution)
-    env = Env1(xystart,xyend,resolution,path)
+#     # K = [[58.98295314305732, -40.46389776524755], [-19.5748849118947, -78.531936254165], [-62.674712335622026, 24.06481669719506], [-31.09947113556031, 61.08658069805723],[30,55.4],[52.20911077098446, 26.412130624396212]]
+#     K = [[-10, -40], [-36.28155339805825, -40.0], [-20, -79],[-10,-40]]
+#     # K = [[200.0,200.0],[800.0,200.0],[800.0,700.0],[200.0,700.0],[200,200]]
+#     # oy = [223.0, 28.0,19.0,4.0,0.0, 0.0,  119.0, 223.0]
+#     # ox = [0.0, 50.0, 50.0, 0.0, 0.0]
+#     # oy = [0.0, 0.0, 60.0, 60.0, 0.0]
+#     altitude = 11
+#     overlap = 0.3
+#     path = getOpSweep(K, [x_start,y_start], [x_end,y_end],resolution)
+#     env = Env1(xystart,xyend,resolution,path)
 
-    K.append(K[0])
-    ox, oy = zip(*K)
+#     K.append(K[0])
+#     ox, oy = zip(*K)
     
-    plt.figure()
-    plt.plot(ox, oy, '-xk', label='range')
-    # plt.plot(env.traj[0,:], env.traj[1,:], '-b', label='reference')
-    plt.axis('scaled')
-    plt.show()
+#     plt.figure()
+#     plt.plot(ox, oy, '-xk', label='range')
+#     # plt.plot(env.traj[0,:], env.traj[1,:], '-b', label='reference')
+#     plt.axis('scaled')
+#     plt.show()
     
     # import scipy.io
     # scipy.io.savemat('ref.mat', dict(lm=np.array([ox, oy]),path=env.traj))

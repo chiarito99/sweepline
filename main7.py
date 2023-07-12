@@ -9,7 +9,8 @@ from mpl_toolkits import mplot3d
 from Plotting3 import Plotting
 from env1 import Env1
 from sklearn.metrics import jaccard_score
-from sweep_line_has_bad import getConvexPolygon,computeWLofCamera,getOpSweep
+from sweep_line_has_bad_copy import getConvexPolygon,computeWLofCamera,getOpSweep
+from intersect_Finding import *
 
 global flag,err1,err2,cons,a,f1,f2,vleader
 class LeaderUAV:
@@ -49,9 +50,14 @@ class LeaderUAV:
             v = v + (fao*rot)@vao
         return v
 
-    def control_signal(self, ref):
+    def control_signal(self, ref,flag,err1,err2):
         v1 = self.move_to_goal(ref)
-        return v1 
+        if flag == 1:
+            v1= 1/(self.do*max(err1-cons,err2-cons)) * v1
+            if max(err1-cons,err2-cons) < self.do:
+                v1 =  self.bm*max(err1-cons,err2-cons)/self.am * v1
+        # v2 = self.avoid_obstacle(obs)
+        return v1
     
     def update_position(self, vel, dt=0.1):
         self.pos = self.pos + vel*dt
@@ -59,9 +65,10 @@ class LeaderUAV:
         self.path.append(self.pos)
 
 class FollowerUAV:
-    def __init__(self, pos=[0,0,0], leader=None, delta=[0,0], wp= None):
+    def __init__(self, pos=[0,0], leader=None, delta=[0,0], wp= None):
         # Configuration
         self.pos = np.array(pos)
+        # print(self.pos)
         self.wp = wp
         self.heading = 0
         self.angle = []
@@ -97,19 +104,20 @@ class FollowerUAV:
         # print(a)
         xr = np.cos(self.leader.heading)*self.delta[0] - np.sin(self.leader.heading)*self.delta[1] + ref[0]
         yr = np.sin(self.leader.heading)*self.delta[0] + np.cos(self.leader.heading)*self.delta[1] + ref[1]
-        zr = ref[2]
-        pr = np.array([xr, yr, zr])
+        pr = np.array([xr, yr])
         phi1=0
+        # print(self.pos)
         f1 = pr -self.pos
         # print(f1)
         phi1 = np.arccos((f1[0]*a[0]+f1[1]*a[1])/((np.hypot(f1[0],f1[1]))*(np.hypot(a[0],a[1]))))
         if phi1 == nan:
             phi1=0
-        dk = math.sqrt((xr-self.pos[0])**2 + (yr-self.pos[1])**2 + (zr-self.pos[2])**2)
+        dk = math.sqrt((xr-self.pos[0])**2 + (yr-self.pos[1])**2)
         vkf = (pr-self.pos)/dk# Velocity move to goal
         for i in range(1,len(self.wp)-1):
             # wk =math.sqrt((xr-waypoint[0])**2 + (yr-waypoint[1])**2)
-            wk = math.sqrt((xr-self.wp[i][0])**2 + (yr-self.wp[i][1])**2)     
+            wk = math.sqrt((xr-self.wp[i][0])**2 + (yr-self.wp[i][1])**2)
+            # print(wk)     
             if (3 <wk < 9.5) and  (phi1 > np.pi/2 or flag ==2):
                 vkf = vleader/75
             else:
@@ -133,7 +141,8 @@ class FollowerUAV:
                 fao = self.ao*(1-do/self.bo)
             v = v + (fao*rot)@vao
         return v
-    def control_signal(self, ref, obs,rbt_pos):
+    
+    def control_signal(self, ref):
         v1 = self.keep_formation(ref,flag,a,f1)
         # v2 = 1.2*self.avoid_obstacle(obs)
         # v3 = self.avoid_Robot(rbt_pos)
@@ -206,7 +215,6 @@ def khacphia(pt,K):
     # ox, oy = zip(*K)
     for i in range(2,len(pt),4):
         m4,n4= duongthang(pt[i],pt[i+1])
-        print(m4,n4)
         dem = 0
         for j in range(len(K)-1):
             c = (K[j][0]*m4-K[j][1]+n4)*(K[j+1][0]*m4-K[j+1][1]+n4) 
@@ -343,11 +351,34 @@ if __name__ == "__main__":
     K2.append(K[point_angle[0]+1])
     K2.append(K[point_angle[0]])
     arange(K,point_angle)
-    print(K1)
-    print(K2)
+    # print(K1)
+    # print(K1)
 
-    path1 = getOpSweep(K1,[x_start,y_start],[K1[-1][0],K1[-1][1]],12)
-    print(path1)
+
+
+
+    K_path = K1.copy()
+    K_path.reverse()
+    ox_path,oy_path = zip(*K_path)
+    path = []
+    a_path = planning(resolution,-1,ox_path,oy_path)
+    for i in range(len(a_path[0])):
+        path.append([a_path[0][i],a_path[1][i]])
+    # print(path)
+    # path = path.tolist()
+    # path1.insert(0,[x_start,y_start])
+    map_path = Env1([K_path[1][0],K_path[1][1]],[K_path[-1][0],K_path[-1][1]],resolution,path)
+
+
+
+
+
+
+
+    path1 = getOpSweep(K1,[x_start,y_start],[x_end,y_end],resolution)
+    # print(path1)
+
+    # print(path1)
     # path2 = getOpSweep(K2,[x_start,y_start],[K2[-1][0],K2[-1][1]],2)
     # print(path1)
 
@@ -356,30 +387,64 @@ if __name__ == "__main__":
     # path2.pop(0)
     # path2.pop(len(path2)-1)
 
-    K1.append(K1[0])
+    K1.append([x_end,y_end])
     path1 = khacphia(path1,K1)
     path1 = khacphia1(path1,K1)
+    path1 = path1.tolist()
+    path1.insert(0,[x_start,y_start])
     K2.append(K2[0])
     # path2 = khacphia(path2,K2)
     # path2 = khacphia1(path2,K2)
 
     ox1 ,oy1 = zip(*K1)
     ox2 ,oy2 = zip(*K2)
-    map1 = Env1([x_start,y_start],[K1[-1][0],K1[-1][1]],5,path1)
+    map1 = Env1([x_start,y_start],[x_end,y_end],resolution,path1)
+    # print(map1.traj)
     # map2 = Env1([x_start,y_start],[K2[-1][0],K2[-1][1]],5,path2)
 
     # Formation processing
     leader = LeaderUAV(pos=[x_start,y_start])
-    # follower1 = FollowerUAV(pos=[x_start,y_start,0],leader=leader, delta=[-offsetx,-offsety],wp = pt)
-    # follower2 = FollowerUAV(pos=[x_start,y_start,0],leader=leader, delta=[-offsetx, offsety],wp = pt)
+    follower1 = FollowerUAV(pos=[x_start,y_start],leader=leader, delta=[-offsetx,-offsety],wp = path1)
+    follower2 = FollowerUAV(pos=[x_start,y_start],leader=leader, delta=[-offsetx, offsety],wp = path1)
     x_traj, y_traj = [], []
+    min = 1000
+    flag_point = 0
     for i in range(1,len(map1.traj[0])):
         ref1 = map1.traj[:,i]
-        lvel1 = leader.control_signal(ref1)
+        a = ref1-a
+        lvel1 = leader.control_signal(ref1,flag,err1,err2)
+        rbt_pos = np.array([follower1.pos,follower2.pos])
+        disLP = leader.pos - K2[2]
+        if np.hypot(disLP[0],disLP[1]) < min:
+            min = np.hypot(disLP[0],disLP[1])
+        if flag_point == 0 and min < 35:
+            f1vel = follower1.control_signal(K2[2])
+            if math.sqrt((follower1.pos[0]-K2[2][0])**2 + (follower1.pos[1]-K2[2][1])**2)< 3:
+                flag_point = 1
+        else:
+            f1vel = follower1.control_signal(ref1)
+
+        f2vel = follower2.control_signal(ref1)
+        # f3vel = follower3.control_signal(ref, map.obs,rbt_pos)
+        # f4vel = follower4.control_signal(ref, map.obs,rbt_pos)
+        # # UAV update
         leader.update_position(lvel1)
+        a = leader.pos
+        vleader = lvel1
+        follower1.update_position(f1vel)
+        follower2.update_position(f2vel)
+        err1= np.hypot((leader.pos[0]-follower1.pos[0]),(leader.pos[1]-follower1.pos[1]))
+        err2 = np.hypot((leader.pos[0]-follower2.pos[0]),(leader.pos[1]-follower2.pos[1]))
+        if err1+err2- 2*disLF > 0.7 and err1+err2- 2*disLF < 1.5 :
+            flag = 1
+        elif abs(leader.heading - follower1.heading) >np.pi/2 or abs(leader.heading - follower2.heading) >np.pi/2 :
+            flag = 2
+        else:
+            flag=0
+
 
     # plot= Plotting("formation")
-    # plot.plot_animation(leader.path,follower1.path,follower2.path,ox, oy,x_start,y_start,x_end,y_end,length,width,map.obs)
+    # plot.plot_animation(leader.path,follower1.path,follower2.path,ox, oy,x_start,y_start,x_end,y_end,length,width)
     # plt.show()
     
     # Plotting
@@ -388,9 +453,10 @@ if __name__ == "__main__":
     # ax = plt.axes(projection ='3d')
     ax.plot(ox1, oy1, '-xk', label='range')
     ax.plot(ox2, oy2, '-xk', label='range')
-    ax.fill(ox1,oy1,facecolor='red')
+    # ax.fill(ox1,oy1,facecolor='red')
     # ax.fill(ox2,oy2,facecolor='green')
     ax.plot(map1.traj[0,:], map1.traj[1,:], '-b', label='reference')
+    # ax.plot(a_path[0,:],a_path[1,:],'-b',label='reference' )
 
     # plot obstacle
     # for i in range(len(map.obs)):

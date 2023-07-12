@@ -69,7 +69,7 @@ def findIntersection(start_point,base, line2):
     return intersection
 
 def nextVector(i,V, direction):
-    print(i)
+    # print(i)
     if(i == len(V) - 1):
         a = V[i]
         b = V[0]
@@ -128,8 +128,8 @@ def findAntipodalPoints(V):
     return A
 
 def getSweep(starting_point, base, V):
-    print("base:")
-    print(base)
+    # print("base:")
+    # print(base)
     sweepIntersection = []
     for i in range(len(V)):
         if(i==len(V)-1):
@@ -239,8 +239,8 @@ def getPath(base, polygon_end,offset, V, direction):
         path.append(basePointOffset2)
         path.append(basePointOffset1)
     i = 0
-    print(distPoint2line(polygon_end,[path[-1],path[-2]]))
-    print(offset)
+    # print(distPoint2line(polygon_end,[path[-1],path[-2]]))
+    # print(offset)
     while((distPoint2line(polygon_end,[path[-1],path[-2]]) > offset and i == 0) or (distPoint2line(polygon_end,[path[-2],path[-3]]) > offset and i == 1)):
         if(i == 0):
             next = getUp(path[-1], polygon_end, offset, base)
@@ -408,7 +408,7 @@ def increment(i,n):
     i_next = i%n + 1
     if i == n:
         i_next = 0
-    return i_next
+    return i_next;
 
 def clockWiseDist(a,b):
     if a<0:
@@ -454,7 +454,7 @@ def isAConvexPolygon(M):
         angle_i = np.pi - angleAP(M, i,j)
         if (angle_i > np.pi) or (angle_i < 0):
             isConvex = False
-    return isConvex
+    return isConvex;
 
 
 def getPolygon(numVert, radius, radVar, angVar):
@@ -471,7 +471,7 @@ def getPolygon(numVert, radius, radVar, angVar):
     Polygon_vertex = np.flipud(Polygon_vertex)
     shifted_polygon_vertex = np.roll(Polygon_vertex, -1,0)
 
-    return Polygon_vertex, shifted_polygon_vertex
+    return Polygon_vertex, shifted_polygon_vertex;
 
 def getConvexPolygon(numVert, radius, radVar, angVar):
     isConvex = False
@@ -488,21 +488,19 @@ def computeWLofCamera(height, alpha, beta):
 
 # # coord = [[1,1], [2,1], [1.8,1.8], [0.8,2], [0.5,1.5]]
 # coord = [[1,1], [3,1], [2,3], [0.8,2], [0.5,1.5]]
-# coord = [[1,2], [3,2], [3,1]]
-# coord = [[-10, -40], [-36.28155339805825, -40.0], [-36.28155339805825, -10]]
-
-# # V = coord[::-1]
-# # # coord = [[146.76306045999095, -2.0473334316286795], [-60.526906172934744, -109.76533421120082], [-132.6429327946019, 20.193654150405926], [-14.865406821485804, 101.09338703482929], [78.12772846254278, 117.07811942387043]]
-# # # coord = [[93.66465192394718, -110.36956689901635], [-66.07872666446623, -178.26289333143518], [-120.0938559030976, -68.63167151822334], [-91.59810431321333, 106.98604310933723], [163.91984334377128, 8.73263368860047]]
-# # coord = [[98.50962429288698, -144.1519054946347], [24.203143228386516, -163.44423722112364], [-125.85339761977067, 37.88119097590002], [-114.68711430151565, 153.07972833204173], [94.98896813047023, 104.89551120000584]]
+# # coord = [[1,2], [3,2], [3,1], [1,1]]
+# V = coord[::-1]
+# # coord = [[146.76306045999095, -2.0473334316286795], [-60.526906172934744, -109.76533421120082], [-132.6429327946019, 20.193654150405926], [-14.865406821485804, 101.09338703482929], [78.12772846254278, 117.07811942387043]]
+# # coord = [[93.66465192394718, -110.36956689901635], [-66.07872666446623, -178.26289333143518], [-120.0938559030976, -68.63167151822334], [-91.59810431321333, 106.98604310933723], [163.91984334377128, 8.73263368860047]]
+# coord = [[98.50962429288698, -144.1519054946347], [24.203143228386516, -163.44423722112364], [-125.85339761977067, 37.88119097590002], [-114.68711430151565, 153.07972833204173], [94.98896813047023, 104.89551120000584]]
 # V = coord
-# #  #repeat the first point to create a 'closed loop'
+#  #repeat the first point to create a 'closed loop'
 
-# # # coord = [[93.0, -88.0], [-85.0, -135.0], [-154.0, 45.0], [-84.0, 101.0], [126.0, 170.0]]
+# # coord = [[93.0, -88.0], [-85.0, -135.0], [-154.0, 45.0], [-84.0, 101.0], [126.0, 170.0]]
 
-# # print(findAntipodalPoints(V))
+# print(findAntipodalPoints(V))
 
-# path = getOpSweep(V, [2,0], [0,2], 2)
+# path = getBadSweep(V, [2,0], [0,2], 0.09)
 
 
 # coord.append(coord[0])
