@@ -91,6 +91,7 @@ class Find_intersect():
                                         min(self.take_element(x_grid, self.indexes(y_grid, i)))])
                     y_intersect.extend([i, i])
 
+
             if (i + offset) % self.resolution == self.resolution - 1:
                 self.swap_moving_direction()
         #print(y_intersect)
@@ -162,16 +163,20 @@ class Find_intersect():
                 self.x_ori = ox[i]
                 self.y_ori = oy[i]
                 self.th = np.arctan2(y_vector[i], x_vector[i])
+    def resolution_change(self, resolution_change):
+        self.resolution = resolution_change*self.scale_para
+        
 def planning(resolution, dr_move, xo, yo):
     emp = Find_intersect(resolution, dr_move)
     ox, oy = emp.convert(xo, yo)
     cx, cy = emp.find_intersect(ox, oy)
     x, y = emp.in_convert(cx, cy)
     return x, y
+
 # xo = [0, 150, 90,  60,  -20,  0 ]
 # yo = [0,  0, 100, 120, 60,    0 ]
 # x, y = planning(2.333, -1, xo, yo)
-# print(x)
+# # print(x)
 # plt.plot(xo, yo)
 # plt.plot(x, y)
 # plt.show()
