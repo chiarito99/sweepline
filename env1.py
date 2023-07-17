@@ -32,7 +32,8 @@ class Env1:
                 px.append(xk)
                 py.append(yk)
 
-        ds = 0.3  # [m] distance of each intepolated points
+        # print(px[1:10])
+        ds = 0.4 # [m] distance of each intepolated points
         sp = Spline2D(px, py)
         s = np.arange(0, sp.s[-1], ds)
         self.s=s

@@ -100,11 +100,16 @@ class FollowerUAV:
                 v=v
         return v
 
-    def keep_formation(self, ref,flag,a,f1):
+    def keep_formation(self, ref,flag,a,f1,vleader,flag_p):
         # print(a)
-        xr = np.cos(self.leader.heading)*self.delta[0] - np.sin(self.leader.heading)*self.delta[1] + ref[0]
-        yr = np.sin(self.leader.heading)*self.delta[0] + np.cos(self.leader.heading)*self.delta[1] + ref[1]
-        pr = np.array([xr, yr])
+        if flag_p == 0:
+            xr = np.cos(self.leader.heading)*self.delta[0] - np.sin(self.leader.heading)*self.delta[1] + ref[0]
+            yr = np.sin(self.leader.heading)*self.delta[0] + np.cos(self.leader.heading)*self.delta[1] + ref[1]
+            pr = np.array([xr, yr])
+        else:
+            xr = ref[0]
+            yr = ref[1]
+            pr = np.array([xr, yr])
         phi1=0
         # print(self.pos)
         f1 = pr -self.pos
@@ -114,15 +119,13 @@ class FollowerUAV:
             phi1=0
         dk = math.sqrt((xr-self.pos[0])**2 + (yr-self.pos[1])**2)
         vkf = (pr-self.pos)/dk# Velocity move to goal
-        for i in range(1,len(self.wp)-1):
-            # wk =math.sqrt((xr-waypoint[0])**2 + (yr-waypoint[1])**2)
-            wk = math.sqrt((xr-self.wp[i][0])**2 + (yr-self.wp[i][1])**2)
-            # print(wk)     
-            if (3 <wk < 9.5) and  (phi1 > np.pi/2 or flag ==2):
-                vkf = vleader/75
-            else:
-                vkf= vkf
-
+        if flag_p == 0:
+            for i in range(1,len(self.wp)-1):
+                wk = math.sqrt((xr-self.wp[i][0])**2 + (yr-self.wp[i][1])**2)
+                if (3 <wk < 8.5) and  (phi1 > np.pi/2 or flag ==2) :
+                    vkf = vleader/75
+                else:
+                    vkf= vkf
         fkf = self.am              # Control parameter of vm2g
         if dk <= self.bm:
             fkf = self.am*dk/self.bm
@@ -142,14 +145,16 @@ class FollowerUAV:
             v = v + (fao*rot)@vao
         return v
     
-    def control_signal(self, ref):
-        v1 = self.keep_formation(ref,flag,a,f1)
+    def control_signal(self, ref,flag_p):
+        v1 = self.keep_formation(ref,flag,a,f1,vleader,flag_p)
+        # print(flag_p)
         # v2 = 1.2*self.avoid_obstacle(obs)
         # v3 = self.avoid_Robot(rbt_pos)
         # if v2[1] == 0 and flag == 0 :
-        #     v1 = 1.3*v1
-        # else:
-        #     v1 = v1
+        if flag == 0:
+            v1 = 1.3*v1
+        else:
+            v1 = v1
         return v1
     
     def update_position(self, vel, dt=0.1):
@@ -208,46 +213,6 @@ def duongthang(A,B):
     m = -(A[1]-B[1])/(B[0]-A[0])
     n = (A[1]-B[1])/(B[0]-A[0])*A[0]+A[1]
     return m,n
-
-def khacphia(pt,K):
-    pt = np.array(pt)
-    K = np.array(K)
-    # ox, oy = zip(*K)
-    for i in range(2,len(pt),4):
-        m4,n4= duongthang(pt[i],pt[i+1])
-        dem = 0
-        for j in range(len(K)-1):
-            c = (K[j][0]*m4-K[j][1]+n4)*(K[j+1][0]*m4-K[j+1][1]+n4) 
-            a,b = duongthang(K[j],K[j+1])
-            if c < 0 and j < len(K) -2:
-                dem = dem +1
-                pt[i+2-dem] = giao(a,b,m4,n4)
-                temp = giao(a,b,m4,n4)
-            elif c < 0 and j >= len(K) -2:
-                dem = dem +1
-                pt[i-2+dem] = temp
-                pt[i-1+dem] = giao(a,b,m4,n4)  
-    return pt
-
-def khacphia1(pt,K):
-    pt = np.array(pt)
-    K = np.array(K)
-    # ox, oy = zip(*K)
-    for i in range(0,len(pt),4):
-        m5,n5 = duongthang(pt[i],pt[i+1])
-        dem = 0
-        for j in range(len(K)-1):
-            c = (K[j][0]*m5-K[j][1]+n5)*(K[j+1][0]*m5-K[j+1][1]+n5) 
-            a,b = duongthang(K[j],K[j+1])
-            if c < 0 and j < len(K) -2 :
-                dem = dem +1
-                pt[i-1+dem] = giao(a,b,m5,n5)
-                temp = giao(a,b,m5,n5)
-            elif c< 0 and j >= len(K) -2 :
-                dem = dem +1
-                pt[i-1+dem] = temp
-                pt[i-2+dem] = giao(a,b,m5,n5)
-    return pt
 
 def getAngle(knee, hip, shoulder):
     ang = math.degrees(math.atan2(shoulder[1]-hip[1], shoulder[0]-hip[0]) - math.atan2(knee[1]-hip[1], knee[0]-hip[0]))
@@ -342,7 +307,6 @@ if __name__ == "__main__":
     point_angle = checkangle(K,point_angle)
     checkslide(K,point_angle)
 
-    # print(K)
     ox, oy = zip(*K)
     K1 = []
     K1.append(K[point_angle[0]-1])
@@ -351,98 +315,75 @@ if __name__ == "__main__":
     K2.append(K[point_angle[0]+1])
     K2.append(K[point_angle[0]])
     arange(K,point_angle)
-    # print(K1)
-    # print(K1)
 
-
-
-
-    K_path = K1.copy()
-    K_path.reverse()
-    ox_path,oy_path = zip(*K_path)
-    path = []
-    a_path = planning(resolution,-1,ox_path,oy_path)
+    K1.append(K1[0])
+    K1.reverse()
+    ox1,oy1= zip(*K1)
+    path1 = []
+    a_path = planning(resolution,1,ox1,oy1)
     for i in range(len(a_path[0])):
-        path.append([a_path[0][i],a_path[1][i]])
-    # print(path)
-    # path = path.tolist()
-    # path1.insert(0,[x_start,y_start])
-    map_path = Env1([K_path[1][0],K_path[1][1]],[K_path[-1][0],K_path[-1][1]],resolution,path)
-
-
-
-
-
-
-
-    path1 = getOpSweep(K1,[x_start,y_start],[x_end,y_end],resolution)
-    # print(path1)
-
-    # print(path1)
-    # path2 = getOpSweep(K2,[x_start,y_start],[K2[-1][0],K2[-1][1]],2)
-    # print(path1)
-
-    path1.pop(0)
-    path1.pop(len(path1)-1)
-    # path2.pop(0)
-    # path2.pop(len(path2)-1)
-
-    K1.append([x_end,y_end])
-    path1 = khacphia(path1,K1)
-    path1 = khacphia1(path1,K1)
-    path1 = path1.tolist()
+        path1.append([a_path[0][i],a_path[1][i]])
     path1.insert(0,[x_start,y_start])
-    K2.append(K2[0])
-    # path2 = khacphia(path2,K2)
-    # path2 = khacphia1(path2,K2)
-
-    ox1 ,oy1 = zip(*K1)
-    ox2 ,oy2 = zip(*K2)
     map1 = Env1([x_start,y_start],[x_end,y_end],resolution,path1)
-    # print(map1.traj)
-    # map2 = Env1([x_start,y_start],[K2[-1][0],K2[-1][1]],5,path2)
 
+    K2.append(K2[0])
+    # print(K2)
+    # K2.reverse()
+    ox2 ,oy2 = zip(*K2)
+    path2 = []
+    b_path = planning(5,1,ox2,oy2)
+    for i in range(len(b_path[0])):
+        path2.append([b_path[0][i],b_path[1][i]])
+    # path2.insert(0,[x_start,y_start])
+    path2.append(K2[0])
+    # print(path2)
+    map2 = Env1([x_start,y_start],[x_end,y_end],5,path2)
+    # print(len(map2.traj[0]))
+
+    var = 0
     # Formation processing
     leader = LeaderUAV(pos=[x_start,y_start])
-    follower1 = FollowerUAV(pos=[x_start,y_start],leader=leader, delta=[-offsetx,-offsety],wp = path1)
+    follower1 = FollowerUAV(pos=[x_start,y_start],leader=leader, delta=[-offsetx,-offsety],wp = path2)
     follower2 = FollowerUAV(pos=[x_start,y_start],leader=leader, delta=[-offsetx, offsety],wp = path1)
     x_traj, y_traj = [], []
-    min = 1000
-    flag_point = 0
+    min = 7
+    flag_point1 = 0
+    flag_point2 = 0
     for i in range(1,len(map1.traj[0])):
         ref1 = map1.traj[:,i]
         a = ref1-a
         lvel1 = leader.control_signal(ref1,flag,err1,err2)
+        vleader = lvel1
         rbt_pos = np.array([follower1.pos,follower2.pos])
-        disLP = leader.pos - K2[2]
+        disLP = leader.pos - map2.traj[:,0]
         if np.hypot(disLP[0],disLP[1]) < min:
-            min = np.hypot(disLP[0],disLP[1])
-        if flag_point == 0 and min < 35:
-            f1vel = follower1.control_signal(K2[2])
-            if math.sqrt((follower1.pos[0]-K2[2][0])**2 + (follower1.pos[1]-K2[2][1])**2)< 3:
-                flag_point = 1
+            flag_point1 = 1
+            # print(min)
+        if flag_point1 == 1:
+            # print("i:")
+            # print(i)
+            f1vel = follower1.control_signal(map2.traj[:,var], flag_point1)
+            var = var + 1
+            if var == len(map2.traj[0]):
+                flag_point1 = 0
         else:
-            f1vel = follower1.control_signal(ref1)
+            f1vel = follower1.control_signal(ref1,flag_point1)
 
-        f2vel = follower2.control_signal(ref1)
-        # f3vel = follower3.control_signal(ref, map.obs,rbt_pos)
-        # f4vel = follower4.control_signal(ref, map.obs,rbt_pos)
+        f2vel = follower2.control_signal(ref1,flag_point2)
         # # UAV update
         leader.update_position(lvel1)
         a = leader.pos
-        vleader = lvel1
+        # vleader = lvel1
         follower1.update_position(f1vel)
         follower2.update_position(f2vel)
         err1= np.hypot((leader.pos[0]-follower1.pos[0]),(leader.pos[1]-follower1.pos[1]))
         err2 = np.hypot((leader.pos[0]-follower2.pos[0]),(leader.pos[1]-follower2.pos[1]))
-        if err1+err2- 2*disLF > 0.7 and err1+err2- 2*disLF < 1.5 :
+        if err1+err2- 2*disLF > 0.7 and err1+err2- 2*disLF < 1.5:
             flag = 1
-        elif abs(leader.heading - follower1.heading) >np.pi/2 or abs(leader.heading - follower2.heading) >np.pi/2 :
+        elif (abs(leader.heading - follower1.heading) >np.pi/2 or abs(leader.heading - follower2.heading) >np.pi/2) :
             flag = 2
         else:
-            flag=0
-
-
+            flag=0           
     # plot= Plotting("formation")
     # plot.plot_animation(leader.path,follower1.path,follower2.path,ox, oy,x_start,y_start,x_end,y_end,length,width)
     # plt.show()
@@ -451,29 +392,29 @@ if __name__ == "__main__":
     plt.figure()
     ax = plt.axes(projection ='rectilinear')
     # ax = plt.axes(projection ='3d')
-    ax.plot(ox1, oy1, '-xk', label='range')
+    # ax.plot(ox1, oy1, '-xk', label='range')
     ax.plot(ox2, oy2, '-xk', label='range')
+    ax.plot(ox1, oy1,'-xk',label = 'range')
     # ax.fill(ox1,oy1,facecolor='red')
     # ax.fill(ox2,oy2,facecolor='green')
     ax.plot(map1.traj[0,:], map1.traj[1,:], '-b', label='reference')
-    # ax.plot(a_path[0,:],a_path[1,:],'-b',label='reference' )
-
+    ax.plot(map2.traj[0,:], map2.traj[1,:], '-b', label='reference')
+    # ax.plot(a_path[0,:],a_path[1,:],'-b',label='reference')
     # plot obstacle
     # for i in range(len(map.obs)):
     #     Xc, Yc, Zc = plot_obstacles(map.obs[i,0], map.obs[i,1], 1.2*map.altitude, map.obs[i,2])
     #     ax.plot_surface(Xc, Yc, Zc, alpha=0.5)
 
-    # leader.path = np.array(leader.path)
-    # follower1.path = np.array(follower1.path)
-    # follower2.path = np.array(follower2.path)
-    # ax.plot(leader.path[:,0], leader.path[:,1], leader.path[:,2], '--r', label='Leader ')
-    # ax.plot(follower1.path[:,0], follower1.path[:,1], follower1.path[:,2], '--c', label='Follower 1 ')
-    # ax.plot(follower2.path[:,0], follower2.path[:,1], follower2.path[:,2], '--g', label='Follower 2 ')
+    leader.path = np.array(leader.path)
+    follower1.path = np.array(follower1.path)
+    follower2.path = np.array(follower2.path)
+    ax.plot(leader.path[:,0], leader.path[:,1], '--r', label='Leader ')
+    ax.plot(follower1.path[:,0], follower1.path[:,1], '--c', label='Follower 1 ')
+    ax.plot(follower2.path[:,0], follower2.path[:,1], '--g', label='Follower 2 ')
 
     ax.plot(x_start, y_start, 'ks', label='start')    # start
     ax.plot(x_end, y_end, 'ko', label='end')    # end
     
-
     ax.set_title("Forest rangers")
     # ax.grid(True)
     ax.set_xlabel('x [m]')
