@@ -10,7 +10,7 @@ from Plotting3 import Plotting
 from env1 import Env1
 from sklearn.metrics import jaccard_score
 from sweep_line_has_bad_copy import getConvexPolygon,computeWLofCamera,getOpSweep
-from intersect_Finding import *
+from intersect_Finding_1 import *
 
 global flag,err1,err2,cons,a,f1,f2,vleader
 class LeaderUAV:
@@ -162,8 +162,6 @@ class FollowerUAV:
         self.angle.append(self.heading)
         self.pos = self.pos + vel*dt
         self.path.append(self.pos)
-
-
 
 def plot_obstacles(ox, oy, oz, r):
     z = np.linspace(0, oz, 50)
@@ -320,16 +318,26 @@ if __name__ == "__main__":
 
     K1.append(K1[0])
     K1.reverse()
+    print(K1)
     ox1,oy1= zip(*K1)
-    a_path = planning(resolution,1,ox1,oy1)
+    a_path = planning(resolution,1,ox1,oy1,[],0)
     for i in range(len(a_path[0])):
         path1.append([a_path[0][i],a_path[1][i]])
+
+    c_path = planning(resolution*3/5,1,ox1,oy1,[55.773106060606054, -9.575],6)
+    pathc = []
+    for i in range(len(c_path[0])):
+        pathc.append([c_path[0][i],c_path[1][i]])
+
     path1.insert(0,[x_start,y_start])
+    print(path1)
+    print(pathc)
     map1 = Env1([x_start,y_start],[x_end,y_end],resolution,path1)
+    mapc = Env1([x_start,y_start],[x_end,y_end],resolution*3/5,pathc)
 
     K2.append(K2[0])
     ox2 ,oy2 = zip(*K2)
-    b_path = planning(5,1,ox2,oy2)
+    b_path = planning(5,1,ox2,oy2,[],0)
     for i in range(len(b_path[0])):
         path2.append([b_path[0][i],b_path[1][i]])
     path2.append(K2[0])
@@ -394,18 +402,19 @@ if __name__ == "__main__":
     # ax.fill(ox2,oy2,facecolor='green')
     ax.plot(map1.traj[0,:], map1.traj[1,:], '-b', label='reference')
     ax.plot(map2.traj[0,:], map2.traj[1,:], '-b', label='reference')
+    ax.plot(mapc.traj[0,:], mapc.traj[1,:], '-r', label='reference')
     # ax.plot(a_path[0,:],a_path[1,:],'-b',label='reference')
     # plot obstacle
     # for i in range(len(map.obs)):
     #     Xc, Yc, Zc = plot_obstacles(map.obs[i,0], map.obs[i,1], 1.2*map.altitude, map.obs[i,2])
     #     ax.plot_surface(Xc, Yc, Zc, alpha=0.5)
 
-    leader.path = np.array(leader.path)
-    follower1.path = np.array(follower1.path)
-    follower2.path = np.array(follower2.path)
-    ax.plot(leader.path[:,0], leader.path[:,1], '--r', label='Leader ')
-    ax.plot(follower1.path[:,0], follower1.path[:,1], '--c', label='Follower 1 ')
-    ax.plot(follower2.path[:,0], follower2.path[:,1], '--g', label='Follower 2 ')
+    # leader.path = np.array(leader.path)
+    # follower1.path = np.array(follower1.path)
+    # follower2.path = np.array(follower2.path)
+    # ax.plot(leader.path[:,0], leader.path[:,1], '--r', label='Leader ')
+    # ax.plot(follower1.path[:,0], follower1.path[:,1], '--c', label='Follower 1 ')
+    # ax.plot(follower2.path[:,0], follower2.path[:,1], '--g', label='Follower 2 ')
 
     ax.plot(x_start, y_start, 'ks', label='start')    # start
     ax.plot(x_end, y_end, 'ko', label='end')    # end
